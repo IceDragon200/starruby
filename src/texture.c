@@ -323,7 +323,7 @@ Texture_s_load(int argc, VALUE* argv, VALUE self)
     png_set_packing(pngPtr);
   }
   if (colorType == PNG_COLOR_TYPE_GRAY && bitDepth < 8) {
-    png_set_gray_1_2_4_to_8(pngPtr);
+    png_set_expand_gray_1_2_4_to_8(pngPtr);
   }
   png_read_update_info(pngPtr, infoPtr);
   if (0 < infoPtr->num_palette && hasPalette) {

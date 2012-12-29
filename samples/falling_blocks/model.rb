@@ -1,5 +1,8 @@
-require "falling_blocks/piece"
-require "falling_blocks/field"
+#require "falling_blocks/piece"
+#require "falling_blocks/field"
+
+require_relative "piece"
+require_relative "field"
 
 module FallingBlocks
   

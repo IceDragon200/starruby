@@ -219,7 +219,7 @@ InitializeScreen(Game* game)
   options |= SDL_OPENGL;
   if (game->isFullscreen) {
     options |= SDL_HWSURFACE | SDL_FULLSCREEN;
-    game->windowScale = 1;    
+    game->windowScale = 1;
     SDL_Rect** modes = SDL_ListModes(NULL, options);
     if (!modes) {
       rb_raise(rb_eRuntimeError, "not supported fullscreen resolution");
@@ -555,7 +555,7 @@ Game_wait(VALUE self)
       gameTimer->error = MIN(diff - 1000, 1000);
       gameTimer->before = now;
       break;
-    }        
+    }
     SDL_Delay(1);
   }
   gameTimer->counter++;

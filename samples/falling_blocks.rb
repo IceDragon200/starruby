@@ -1,7 +1,12 @@
-require "starruby"
-require "falling_blocks/model"
-require "falling_blocks/controller"
-require "falling_blocks/view"
+#require "starruby"
+#require "falling_blocks/model"
+#require "falling_blocks/controller"
+#require "falling_blocks/view"
+
+require_relative "../starruby"
+require_relative "falling_blocks/model"
+require_relative "falling_blocks/controller"
+require_relative "falling_blocks/view"
 
 def main
   # Model holds the state of this game

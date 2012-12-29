@@ -1,128 +1,7 @@
 #include <assert.h>
 #include "starruby_private.h"
 #include <png.h>
-
-#define ALPHA(src, dst, a) DIV255((dst << 8) - dst + (src - dst) * a)
-
-#define LOOP(process, length) \
-  do {                        \
-    int n = (length + 7) / 8; \
-    switch (length % 8) {     \
-    case 0: do { process;     \
-      case 7: process;        \
-      case 6: process;        \
-      case 5: process;        \
-      case 4: process;        \
-      case 3: process;        \
-      case 2: process;        \
-      case 1: process;        \
-      } while (--n > 0);      \
-    }                         \
-  } while (false)
-
-static volatile VALUE rb_cTexture = Qundef;
-
-static volatile VALUE symbol_add            = Qundef;
-static volatile VALUE symbol_alpha          = Qundef;
-static volatile VALUE symbol_angle          = Qundef;
-static volatile VALUE symbol_background     = Qundef;
-static volatile VALUE symbol_blend_type     = Qundef;
-static volatile VALUE symbol_blur           = Qundef;
-static volatile VALUE symbol_camera_height  = Qundef;
-static volatile VALUE symbol_camera_pitch   = Qundef;
-static volatile VALUE symbol_camera_roll    = Qundef;
-static volatile VALUE symbol_camera_x       = Qundef;
-static volatile VALUE symbol_camera_y       = Qundef;
-static volatile VALUE symbol_camera_yaw     = Qundef;
-static volatile VALUE symbol_center_x       = Qundef;
-static volatile VALUE symbol_center_y       = Qundef;
-static volatile VALUE symbol_height         = Qundef;
-static volatile VALUE symbol_intersection_x = Qundef;
-static volatile VALUE symbol_intersection_y = Qundef;
-static volatile VALUE symbol_io_length      = Qundef;
-static volatile VALUE symbol_loop           = Qundef;
-static volatile VALUE symbol_mask           = Qundef;
-static volatile VALUE symbol_matrix         = Qundef;
-static volatile VALUE symbol_none           = Qundef;
-static volatile VALUE symbol_palette        = Qundef;
-static volatile VALUE symbol_saturation     = Qundef;
-static volatile VALUE symbol_scale_x        = Qundef;
-static volatile VALUE symbol_scale_y        = Qundef;
-static volatile VALUE symbol_src_height     = Qundef;
-static volatile VALUE symbol_src_width      = Qundef;
-static volatile VALUE symbol_src_x          = Qundef;
-static volatile VALUE symbol_src_y          = Qundef;
-static volatile VALUE symbol_sub            = Qundef;
-static volatile VALUE symbol_tone_blue      = Qundef;
-static volatile VALUE symbol_tone_green     = Qundef;
-static volatile VALUE symbol_tone_red       = Qundef;
-static volatile VALUE symbol_view_angle     = Qundef;
-static volatile VALUE symbol_width          = Qundef;
-static volatile VALUE symbol_x              = Qundef;
-static volatile VALUE symbol_y              = Qundef;
-
-typedef enum {
-  BLEND_TYPE_NONE,
-  BLEND_TYPE_ALPHA,
-  BLEND_TYPE_ADD,
-  BLEND_TYPE_SUB,
-  BLEND_TYPE_MASK,
-} BlendType;
-
-typedef enum {
-  BLUR_TYPE_NONE,
-  BLUR_TYPE_COLOR,
-  BLUR_TYPE_BACKGROUND,
-} BlurType;
-
-typedef struct {
-  double a, b, c, d, tx, ty;
-} AffineMatrix;
-
-typedef struct {
-  int x, y, z;
-} Point;
-
-typedef struct {
-  double x, y, z;
-} PointF;
-
-typedef Point Vector;
-typedef PointF VectorF;
-
-typedef struct {
-  int cameraX;
-  int cameraY;
-  double cameraHeight;
-  double cameraYaw;
-  double cameraPitch;
-  double cameraRoll;
-  double viewAngle;
-  int intersectionX;
-  int intersectionY;
-  bool isLoop;
-  BlurType blurType;
-  Color blurColor;
-} PerspectiveOptions;
-
-typedef struct {
-  double angle;
-  double scaleX;
-  double scaleY;
-  int centerX;
-  int centerY;
-  AffineMatrix matrix;
-  int srcHeight;
-  int srcWidth;
-  int srcX;
-  int srcY;
-  int toneRed;
-  int toneGreen;
-  int toneBlue;
-  int saturation;
-  BlendType blendType;
-  uint8_t alpha;
-} RenderingTextureOptions;
+#include "texture.h"
 
 VALUE
 strb_GetTextureClass(void)
@@ -131,6 +10,7 @@ strb_GetTextureClass(void)
 }
 
 static void Texture_free(Texture*);
+
 inline void
 strb_CheckTexture(VALUE rbTexture)
 {
@@ -255,7 +135,7 @@ Texture_s_load(int argc, VALUE* argv, VALUE self)
   volatile VALUE rbIO, rbIOToClose = Qnil;
   if (TYPE(rbPathOrIO) == T_STRING) {
     volatile VALUE rbCompletePath = strb_GetCompletePath(rbPathOrIO, true);
-    volatile VALUE rbOpenOption = rb_str_new2("rb"); 
+    volatile VALUE rbOpenOption = rb_str_new2("rb");
     rbIOToClose = rbIO =
       rb_funcall(rb_mKernel, rb_intern("open"), 2,
                  rbCompletePath, rbOpenOption);
@@ -338,7 +218,7 @@ Texture_s_load(int argc, VALUE* argv, VALUE self)
     texture->indexes = ALLOC_N(uint8_t, width * height);
 
     int numTrans;
-    png_colorp trans_color;
+    png_color_16p trans_color;
     png_bytep trans;
 
     png_get_tRNS(pngPtr, infoPtr, &trans, &numTrans, &trans_color);
@@ -507,6 +387,7 @@ Texture_aset(VALUE self, VALUE rbX, VALUE rbY, VALUE rbColor)
 }
 
 static VALUE Texture_change_hue_bang(VALUE, VALUE);
+
 static VALUE
 Texture_change_hue(VALUE self, VALUE rbAngle)
 {
@@ -736,7 +617,7 @@ Texture_fill_rect(VALUE self, VALUE rbX, VALUE rbY,
     return self;
   }
   Color color;
-  strb_GetColorFromRubyValue(&color, rbColor);  
+  strb_GetColorFromRubyValue(&color, rbColor);
   Pixel* pixels = &(texture->pixels[rectX + rectY * texture->width]);
   const int paddingJ = texture->width - rectWidth;
   for (int j = rectY; j < rectY + rectHeight; j++, pixels += paddingJ) {
@@ -744,6 +625,144 @@ Texture_fill_rect(VALUE self, VALUE rbX, VALUE rbY,
       pixels->color = color;
     }
   }
+  return self;
+}
+
+#define TRANSITION_COLOR(col, base, diff, rt, rM)            \
+  Color col;                                                 \
+  col.red   = CLAMP255(base.red   + (diff.red   * rt / rM)); \
+  col.green = CLAMP255(base.green + (diff.green * rt / rM)); \
+  col.blue  = CLAMP255(base.blue  + (diff.blue  * rt / rM)); \
+  col.alpha = CLAMP255(base.alpha + (diff.alpha * rt / rM))
+
+struct ColorDiff {
+  int red, green, blue, alpha;
+};
+
+static VALUE
+Texture_gradient_fill_rect(VALUE self,
+                  VALUE rbX, VALUE rbY,
+                  VALUE rbWidth, VALUE rbHeight,
+                  VALUE rbColor1, VALUE rbColor2, VALUE rbVertical)
+{
+  rb_check_frozen(self);
+  const Texture* texture;
+  Data_Get_Struct(self, Texture, texture);
+  strb_CheckDisposedTexture(texture);
+  CheckPalette(texture);
+
+  Pixel* pixels = texture->pixels;
+
+  int rx = NUM2INT(rbX);
+  int ry = NUM2INT(rbY);
+  int rwidth = NUM2INT(rbWidth);
+  int rheight = NUM2INT(rbHeight);
+  int rx2 = rx + rwidth;
+  int ry2 = ry + rheight;
+
+  if (!ModifyRectInTexture(texture, &rx, &ry, &rwidth, &rheight)) {
+    return self;
+  }
+
+  Color color1, color2;
+  strb_GetColorFromRubyValue(&color1, rbColor1);
+  strb_GetColorFromRubyValue(&color2, rbColor2);
+
+  struct ColorDiff base;
+  base.red   = color1.red;
+  base.green = color1.green;
+  base.blue  = color1.blue;
+  base.alpha = color1.alpha;
+
+  struct ColorDiff diff;
+  diff.red   = color2.red   - base.red;
+  diff.green = color2.green - base.green;
+  diff.blue  = color2.blue  - base.blue;
+  diff.alpha = color2.alpha - base.alpha;
+
+  signed int r = 0;
+  if(rbVertical == Qtrue) {
+    for(int y = ry; y < ry2; y++, r++) {
+      TRANSITION_COLOR(color, base, diff, r, rheight);
+
+      for(int x = rx; x < rx2; x++) {
+        pixels[x + (y * texture->width)].color = color;
+      }
+    }
+  }
+  else
+  {
+    for(int x = rx; x < rx2; x++, r++) {
+      TRANSITION_COLOR(color, base, diff, r, rwidth);
+
+      for(int y = ry; y < ry2; y++) {
+        pixels[x + (y * texture->width)].color = color;
+      }
+    }
+  }
+
+  return self;
+}
+
+// #blur
+#define NORMALIZE_COLORS3(target_color, color1, color2, color3)                \
+  target_color.red   = ((color1.red + color2.red + color3.red) / 3);       \
+  target_color.green = ((color1.green + color2.green + color3.green) / 3); \
+  target_color.blue  = ((color1.blue + color2.blue + color3.blue) / 3);    \
+  target_color.alpha = ((color1.alpha + color2.alpha + color3.alpha) / 3);
+
+static VALUE
+Texture_blur(VALUE self)
+{
+  rb_check_frozen(self);
+  const Texture* texture;
+  Data_Get_Struct(self, Texture, texture);
+  strb_CheckDisposedTexture(texture);
+  CheckPalette(texture);
+
+  /*const Texture* src_texture;
+  VALUE rbSrcTexture = rb_obj_dup(self);
+  Data_Get_Struct(rbSrcTexture, Texture, src_texture); */
+
+  Pixel* src_pixels = texture->pixels;
+  Pixel* pixels = texture->pixels;
+
+  for(int y = 1; y < texture->height; y++) {
+    for(int x = 1; x < texture->width; x++) {
+      Pixel cpx, hpx, vpx;
+      Color rscol;
+
+      const int cpx_index = x + (y * texture->width);
+
+      cpx = (src_pixels[cpx_index]);
+      hpx = (src_pixels[x - 1 + (y * texture->width)]);
+      vpx = (src_pixels[x + ((y - 1) * texture->width)]);
+
+      NORMALIZE_COLORS3(rscol, cpx.color, hpx.color, vpx.color);
+
+      pixels[cpx_index].color = rscol;
+    }
+  }
+
+  for(int y = texture->height - 2; y > 0; y--) {
+    for(int x = texture->width - 2; x > 0; x--) {
+      Pixel cpx, hpx, vpx;
+      Color rscol;
+
+      const int cpx_index = x + (y * texture->width);
+
+      cpx = (src_pixels[cpx_index]);
+      hpx = (src_pixels[x + 1 + (y * texture->width)]);
+      vpx = (src_pixels[x + ((y + 1) * texture->width)]);
+
+      NORMALIZE_COLORS3(rscol, cpx.color, hpx.color, vpx.color);
+
+      pixels[cpx_index].color = rscol;
+    }
+  }
+
+  // rb_funcall(rbSrcTexture, rb_intern("dispose"), 0);
+
   return self;
 }
 
@@ -783,20 +802,6 @@ Texture_palette(VALUE self)
     return Qnil;
   }
 }
-
-#define RENDER_PIXEL(_dst, _src)                              \
-  do {                                                        \
-    if (_dst.alpha == 0) {                                    \
-      _dst = _src;                                            \
-    } else {                                                  \
-      if (_dst.alpha < _src.alpha) {                          \
-        _dst.alpha = _src.alpha;                              \
-      }                                                       \
-      _dst.red   = ALPHA(_src.red,   _dst.red,   _src.alpha); \
-      _dst.green = ALPHA(_src.green, _dst.green, _src.alpha); \
-      _dst.blue  = ALPHA(_src.blue,  _dst.blue,  _src.alpha); \
-    }                                                         \
-  } while (false)
 
 static void
 AssignPerspectiveOptions(PerspectiveOptions* options, VALUE rbOptions,
@@ -1822,7 +1827,7 @@ Texture_render_texture(int argc, VALUE* argv, VALUE self)
   if (srcTexture != dstTexture &&
       (matrix->a == 1 && matrix->b == 0 && matrix->c == 0 && matrix->d == 1) &&
       (options.scaleX == 1 && options.scaleY == 1 && options.angle == 0 &&
-       toneRed == 0 && toneGreen == 0 && toneBlue == 0 && saturation == 255 && 
+       toneRed == 0 && toneGreen == 0 && toneBlue == 0 && saturation == 255 &&
        (options.blendType == BLEND_TYPE_ALPHA || options.blendType == BLEND_TYPE_NONE))) {
     RenderTexture(srcTexture, dstTexture,
                   srcX, srcY, srcWidth, srcHeight, NUM2INT(rbX), NUM2INT(rbY),
@@ -1997,6 +2002,8 @@ strb_InitializeTexture(VALUE rb_mStarRuby)
                    Texture_aref, 2);
   rb_define_method(rb_cTexture, "[]=",
                    Texture_aset, 3);
+  rb_define_method(rb_cTexture, "blur",
+                   Texture_blur, 0);
   rb_define_method(rb_cTexture, "change_hue",
                    Texture_change_hue, 1);
   rb_define_method(rb_cTexture, "change_hue!",
@@ -2017,6 +2024,8 @@ strb_InitializeTexture(VALUE rb_mStarRuby)
                    Texture_fill, 1);
   rb_define_method(rb_cTexture, "fill_rect",
                    Texture_fill_rect, 5);
+  rb_define_method(rb_cTexture, "gradient_fill_rect",
+                   Texture_gradient_fill_rect, 7);
   rb_define_method(rb_cTexture, "height",
                    Texture_height, 0);
   rb_define_method(rb_cTexture, "palette",

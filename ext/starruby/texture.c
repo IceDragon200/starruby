@@ -9,6 +9,19 @@ strb_GetTextureClass(void)
   return rb_cTexture;
 }
 
+static void
+strb_CheckToneRange(Tone *tone)
+{
+  if(tone->red < -255 || tone->red > 255)
+    rb_raise(rb_eArgError, "toneRed is out of range");
+  if(tone->green < -255 || tone->green > 255)
+    rb_raise(rb_eArgError, "toneGreen is out of range");
+  if(tone->blue < -255 || tone->blue > 255)
+    rb_raise(rb_eArgError, "toneBlue is out of range");
+  if(tone->saturation < -255 || tone->saturation > 255)
+    rb_raise(rb_eArgError, "saturation is out of range");
+}
+
 static void Texture_free(Texture*);
 
 inline void
@@ -223,13 +236,6 @@ Texture_s_load(int argc, VALUE* argv, VALUE self)
 
     png_get_tRNS(pngPtr, infoPtr, &trans, &numTrans, &trans_color);
 
-    //const int numTrans = infoPtr->num_trans;
-//#if PNG_LIBPNG_VER_SONUM <= 12
-//    const png_bytep trans = infoPtr->trans;
-//#else
-//    const png_bytep trans = infoPtr->trans_alpha;
-//#endif
-
     texture->paletteSize = num_palette;
 
     Color* p = texture->palette = ALLOC_N(Color, texture->paletteSize);
@@ -292,6 +298,7 @@ Texture_free(Texture* texture)
   texture->palette = NULL;
   free(texture->indexes);
   texture->indexes = NULL;
+
   free(texture);
 }
 
@@ -523,7 +530,7 @@ Texture_change_palette_bang(VALUE self, VALUE rbPalette)
   return Qnil;
 }
 
-static VALUE
+inline static VALUE
 Texture_clear(VALUE self)
 {
   rb_check_frozen(self);
@@ -1121,78 +1128,6 @@ Texture_render_rect(VALUE self, VALUE rbX, VALUE rbY,
 }
 
 static VALUE Texture_render_texture(int, VALUE*, VALUE);
-static VALUE
-Texture_render_text(int argc, VALUE* argv, VALUE self)
-{
-  volatile VALUE rbText, rbX, rbY, rbFont, rbColor, rbAntiAlias;
-  rb_scan_args(argc, argv, "51",
-               &rbText, &rbX, &rbY, &rbFont, &rbColor, &rbAntiAlias);
-  Check_Type(rbText, T_STRING);
-  if (!(RSTRING_LEN(rbText))) {
-    return self;
-  }
-  const bool antiAlias = RTEST(rbAntiAlias);
-  const char* text = StringValueCStr(rbText);
-  strb_CheckFont(rbFont);
-  const Font* font;
-  Data_Get_Struct(rbFont, Font, font);
-  volatile VALUE rbSize = rb_funcall(rbFont, rb_intern("get_size"), 1, rbText);
-  volatile VALUE rbTextTexture =
-    rb_class_new_instance(2, RARRAY_PTR(rbSize), rb_cTexture);
-  const Texture* textTexture;
-  Data_Get_Struct(rbTextTexture, Texture, textTexture);
-  Color color;
-  strb_GetColorFromRubyValue(&color, rbColor);
-
-  SDL_Surface* textSurfaceRaw;
-  if (antiAlias) {
-    textSurfaceRaw =
-      TTF_RenderUTF8_Shaded(font->sdlFont, text,
-                            (SDL_Color){255, 255, 255, 255},
-                            (SDL_Color){0, 0, 0, 0});
-  } else {
-    textSurfaceRaw =
-      TTF_RenderUTF8_Solid(font->sdlFont, text,
-                           (SDL_Color){255, 255, 255, 255});
-  }
-  if (!textSurfaceRaw) {
-    rb_raise_sdl_ttf_error();
-  }
-  SDL_PixelFormat format = {
-    .palette = NULL, .BitsPerPixel = 32, .BytesPerPixel = 4,
-    .Rmask = 0x00ff0000, .Gmask = 0x0000ff00,
-    .Bmask = 0x000000ff, .Amask = 0xff000000,
-    .colorkey = 0, .alpha = 255,
-  };
-  SDL_Surface* textSurface =
-    SDL_ConvertSurface(textSurfaceRaw, &format, SDL_SWSURFACE);
-  SDL_FreeSurface(textSurfaceRaw);
-  textSurfaceRaw = NULL;
-  if (!textSurface) {
-    rb_raise_sdl_error();
-  }
-  SDL_LockSurface(textSurface);
-  const Pixel* src = (Pixel*)(textSurface->pixels);
-  Pixel* dst = textTexture->pixels;
-  const int size = textTexture->width * textTexture->height;
-  for (int i = 0; i < size; i++, src++, dst++) {
-    if (src->value) {
-      dst->color = color;
-      if (color.alpha == 255) {
-        dst->color.alpha = src->color.red;
-      } else {
-        dst->color.alpha = DIV255(src->color.red * color.alpha);
-      }
-    }
-  }
-  SDL_UnlockSurface(textSurface);
-  SDL_FreeSurface(textSurface);
-  textSurface = NULL;
-
-  Texture_render_texture(3, (VALUE[]){rbTextTexture, rbX, rbY}, self);
-  Texture_dispose(rbTextTexture);
-  return self;
-}
 
 #define ASSIGN_MATRIX(options, val)                                \
   Check_Type(val, T_ARRAY);                                        \
@@ -1273,13 +1208,13 @@ AssignRenderingTextureOptions(st_data_t key, st_data_t val,
       options->blendType = BLEND_TYPE_MASK;
     }
   } else if (key == symbol_tone_red) {
-    options->toneRed = NUM2INT(val);
+    options->tone.red = NUM2INT(val);
   } else if (key == symbol_tone_green) {
-    options->toneGreen = NUM2INT(val);
+    options->tone.green = NUM2INT(val);
   } else if (key == symbol_tone_blue) {
-    options->toneBlue = NUM2INT(val);
+    options->tone.blue = NUM2INT(val);
   } else if (key == symbol_saturation) {
-    options->saturation = NUM2INT(val);
+    options->tone.saturation = NUM2INT(val);
   }
   return ST_CONTINUE;
 }
@@ -1383,6 +1318,94 @@ RenderTexture(const Texture* srcTexture, const Texture* dstTexture,
     assert(false);
     break;
   }
+}
+
+static VALUE
+Texture_render_text(int argc, VALUE* argv, VALUE self)
+{
+  volatile VALUE rbText, rbX, rbY, rbFont, rbColor, rbAntiAlias;
+
+  rb_scan_args(argc, argv, "51",
+               &rbText, &rbX, &rbY, &rbFont, &rbColor, &rbAntiAlias);
+
+  Check_Type(rbText, T_STRING);
+
+  if (!(RSTRING_LEN(rbText))) {
+    return self;
+  }
+
+  const bool antiAlias = RTEST(rbAntiAlias);
+  const char* text = StringValueCStr(rbText);
+
+  strb_CheckFont(rbFont);
+
+  const Font* font;
+
+  Data_Get_Struct(rbFont, Font, font);
+
+  volatile VALUE rbSize = rb_funcall(rbFont, rb_intern("get_size"), 1, rbText);
+  volatile VALUE rbTextTexture =
+    rb_class_new_instance(2, RARRAY_PTR(rbSize), rb_cTexture);
+
+  const Texture* textTexture;
+  Data_Get_Struct(rbTextTexture, Texture, textTexture);
+  Color color;
+  strb_GetColorFromRubyValue(&color, rbColor);
+
+  SDL_Surface* textSurfaceRaw;
+  if (antiAlias) {
+    textSurfaceRaw =
+      TTF_RenderUTF8_Shaded(font->sdlFont, text,
+                            (SDL_Color){255, 255, 255, 255},
+                            (SDL_Color){0, 0, 0, 0});
+  } else {
+    textSurfaceRaw =
+      TTF_RenderUTF8_Solid(font->sdlFont, text,
+                           (SDL_Color){255, 255, 255, 255});
+  }
+  if (!textSurfaceRaw) {
+    rb_raise_sdl_ttf_error();
+  }
+  SDL_PixelFormat format = {
+    .palette = NULL, .BitsPerPixel = 32, .BytesPerPixel = 4,
+    .Rmask = 0x00ff0000, .Gmask = 0x0000ff00,
+    .Bmask = 0x000000ff, .Amask = 0xff000000,
+    .colorkey = 0, .alpha = 255,
+  };
+  SDL_Surface* textSurface =
+    SDL_ConvertSurface(textSurfaceRaw, &format, SDL_SWSURFACE);
+  SDL_FreeSurface(textSurfaceRaw);
+  textSurfaceRaw = NULL;
+  if (!textSurface) {
+    rb_raise_sdl_error();
+  }
+  SDL_LockSurface(textSurface);
+  const Pixel* src = (Pixel*)(textSurface->pixels);
+  Pixel* dst = textTexture->pixels;
+  const int size = textTexture->width * textTexture->height;
+  for (int i = 0; i < size; i++, src++, dst++) {
+    if (src->value) {
+      dst->color = color;
+      if (color.alpha == 255) {
+        dst->color.alpha = src->color.red;
+      } else {
+        dst->color.alpha = DIV255(src->color.red * color.alpha);
+      }
+    }
+  }
+  SDL_UnlockSurface(textSurface);
+  SDL_FreeSurface(textSurface);
+  textSurface = NULL;
+
+  Texture *dstTexture;
+  Data_Get_Struct(self, Texture, dstTexture);
+
+  RenderTexture(textTexture, dstTexture,
+    0, 0, textTexture->width, textTexture->height, NUM2INT(rbX), NUM2INT(rbY),
+    255, 1);
+
+  Texture_dispose(rbTextTexture);
+  return self;
 }
 
 static void
@@ -1520,10 +1543,11 @@ RenderTextureWithOptions(const Texture* srcTexture, const Texture* dstTexture,
   const int srcTextureWidth = srcTexture->width;
   const uint8_t alpha       = options->alpha;
   const BlendType blendType = options->blendType;
-  const int saturation      = options->saturation;
-  const int toneRed         = options->toneRed;
-  const int toneGreen       = options->toneGreen;
-  const int toneBlue        = options->toneBlue;
+  const int saturation      = options->tone.saturation;
+  const int toneRed         = options->tone.red;
+  const int toneGreen       = options->tone.green;
+  const int toneBlue        = options->tone.blue;
+
   for (int j = 0; j < dstHeight; j++) {
     int_fast32_t srcI16 = srcOX16 + j * srcDYX16;
     int_fast32_t srcJ16 = srcOY16 + j * srcDYY16;
@@ -1715,10 +1739,9 @@ Texture_render_texture(int argc, VALUE* argv, VALUE self)
     },
     .alpha        = 255,
     .blendType    = BLEND_TYPE_ALPHA,
-    .toneRed      = 0,
-    .toneGreen    = 0,
-    .toneBlue     = 0,
-    .saturation   = 255,
+    .tone         = (Tone) {
+      .red = 0, .green = 0, .blue = 0, .saturation = 255
+    },
   };
   if (!SPECIAL_CONST_P(rbOptions) && BUILTIN_TYPE(rbOptions) == T_HASH) {
     if (NIL_P(RHASH_IFNONE(rbOptions))) {
@@ -1787,16 +1810,16 @@ Texture_render_texture(int argc, VALUE* argv, VALUE self)
         }
       }
       if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_tone_red))) {
-        options.toneRed = NUM2INT(val);
+        options.tone.red = NUM2INT(val);
       }
       if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_tone_green))) {
-        options.toneGreen = NUM2INT(val);
+        options.tone.green = NUM2INT(val);
       }
       if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_tone_blue))) {
-        options.toneBlue = NUM2INT(val);
+        options.tone.blue = NUM2INT(val);
       }
       if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_saturation))) {
-        options.saturation = NUM2INT(val);
+        options.tone.saturation = NUM2INT(val);
       }
     }
   } else if (!NIL_P(rbOptions)) {
@@ -1804,10 +1827,18 @@ Texture_render_texture(int argc, VALUE* argv, VALUE self)
              rb_obj_classname(rbOptions));
   }
 
-  const int saturation = options.saturation;
-  const int toneRed    = options.toneRed;
-  const int toneGreen  = options.toneGreen;
-  const int toneBlue   = options.toneBlue;
+  options.tone.red = options.tone.red;
+  options.tone.green = options.tone.green;
+  options.tone.blue = options.tone.blue;
+  options.tone.saturation = options.tone.saturation;
+
+  strb_CheckToneRange(&options.tone);
+
+  const int saturation = options.tone.saturation;
+  const int toneRed    = options.tone.red;
+  const int toneGreen  = options.tone.green;
+  const int toneBlue   = options.tone.blue;
+
   if (toneRed   < -255 || 255 < toneRed   ||
       toneGreen < -255 || 255 < toneGreen ||
       toneBlue  < -255 || 255 < toneBlue  ||
@@ -1987,6 +2018,159 @@ Texture_width(VALUE self)
   Data_Get_Struct(self, Texture, texture);
   strb_CheckDisposedTexture(texture);
   return INT2NUM(texture->width);
+}
+
+// Verbosity
+// 0 - Ignore and fix all errors internally
+// 1 - Warn I
+// 2 - Warn II
+// 3 - Strict
+#define VERBOSE_TEXTURE_TOOL 3
+
+static VALUE
+TextureTool_render_texture_fast(VALUE klass,
+  VALUE rbDstTexture, VALUE rbDstX, VALUE rbDstY,
+  VALUE rbSrcTexture,
+  VALUE rbSrcX, VALUE rbSrcY, VALUE rbSrcWidth, VALUE rbSrcHeight,
+  VALUE rbAlpha, VALUE rbBlendType)
+{
+  strb_CheckTexture(rbDstTexture);
+  strb_CheckTexture(rbSrcTexture);
+
+  rb_check_frozen(rbDstTexture);
+
+  const Texture* dstTexture;
+  const Texture* srcTexture;
+  Data_Get_Struct(rbDstTexture, Texture, dstTexture);
+  Data_Get_Struct(rbSrcTexture, Texture, srcTexture);
+  strb_CheckDisposedTexture(dstTexture);
+  strb_CheckDisposedTexture(srcTexture);
+  CheckPalette(dstTexture);
+
+  int dstX = NUM2INT(rbDstX);
+  int dstY = NUM2INT(rbDstY);
+
+  int srcX = NUM2INT(rbSrcX);
+  int srcY = NUM2INT(rbSrcY);
+  int srcWidth = NUM2INT(rbSrcWidth);
+  int srcHeight = NUM2INT(rbSrcHeight);
+
+  const uint8_t alpha = MAX(MIN(NUM2DBL(rbAlpha), 255.0), 0.0);
+  const int blendType = NUM2INT(rbBlendType);
+
+  if (!ModifyRectInTexture(srcTexture,
+                           &(srcX), &(srcY), &(srcWidth), &(srcHeight))) {
+    return Qnil;
+  }
+
+  RenderTexture(
+    srcTexture, dstTexture,
+    srcX, srcY, srcWidth, srcHeight, dstX, dstY,
+    alpha, blendType);
+
+  return Qnil;
+}
+
+static VALUE TextureTool_color_blend(
+  VALUE klass, VALUE rbTexture, VALUE rbColor)
+{
+  strb_CheckTexture(rbTexture);
+  rb_check_frozen(rbTexture);
+
+  const Texture* texture;
+  Color color;
+
+  Data_Get_Struct(rbTexture, Texture, texture);
+  strb_CheckDisposedTexture(texture);
+  CheckPalette(texture);
+  strb_GetColorFromRubyValue(&color, rbColor);
+
+  Pixel* src_pixels = texture->pixels;
+
+  for(int y=0; y < texture->height; y++) {
+    for(int x=0; x < texture->width; x++) {
+      Pixel *dst;
+
+      const int cpx_index = x + (y * texture->width);
+      dst = &(src_pixels[cpx_index]);
+
+      const uint8_t beta = DIV255(color.alpha * dst->color.alpha);
+      if (dst->color.alpha < beta) {
+        dst->color.alpha = beta;
+      }
+      dst->color.red   = ALPHA(color.red,   dst->color.red,   beta);
+      dst->color.green = ALPHA(color.green, dst->color.green, beta);
+      dst->color.blue  = ALPHA(color.blue,  dst->color.blue,  beta);
+    }
+  }
+}
+
+static VALUE TextureTool_clipping_mask(
+  VALUE klass,
+  VALUE rbDstTexture, VALUE rbDstX, VALUE rbDstY,
+  VALUE rbSrcTexture,
+  VALUE rbSrcX, VALUE rbSrcY, VALUE rbSrcWidth, VALUE rbSrcHeight)
+{
+  strb_CheckTexture(rbDstTexture);
+  strb_CheckTexture(rbSrcTexture);
+
+  rb_check_frozen(rbDstTexture);
+
+  const Texture* dstTexture;
+  const Texture* srcTexture;
+  Data_Get_Struct(rbDstTexture, Texture, dstTexture);
+  Data_Get_Struct(rbSrcTexture, Texture, srcTexture);
+  strb_CheckDisposedTexture(dstTexture);
+  strb_CheckDisposedTexture(srcTexture);
+  CheckPalette(dstTexture);
+
+  Pixel* src_pixels = srcTexture->pixels;
+  Pixel* dst_pixels = dstTexture->pixels;
+
+  int dstX = NUM2INT(rbDstX);
+  int dstY = NUM2INT(rbDstY);
+
+  int srcX = NUM2INT(rbSrcX);
+  int srcY = NUM2INT(rbSrcY);
+  int srcWidth = NUM2INT(rbSrcWidth);
+  int srcHeight = NUM2INT(rbSrcHeight);
+
+  if (!ModifyRectInTexture(srcTexture,
+                           &(srcX), &(srcY), &(srcWidth), &(srcHeight))) {
+    return Qnil;
+  }
+
+  for(int y=0; y < srcHeight; y++) {
+    for(int x=0; x < srcWidth; x++) {
+      Pixel *dst, *src;
+      int sx = srcX + x;
+      int sy = srcY + y;
+      int dx = dstX + x;
+      int dy = dstY + y;
+
+      dst = &(dst_pixels[(dx + (dy * dstTexture->width))]);
+      src = &(src_pixels[(sx + (sy * srcTexture->width))]);
+
+      dst->color.red   = src->color.red;
+      dst->color.green = src->color.green;
+      dst->color.blue  = src->color.blue;
+      dst->color.alpha = DIV255(dst->color.alpha * src->color.alpha);
+    }
+  }
+}
+
+VALUE rb_mTextureTool = Qnil;
+
+void strb_InitializeTextureTool(VALUE rb_mStarRuby)
+{
+  rb_mTextureTool = rb_define_module("TextureTool");
+  rb_define_singleton_method(
+    rb_mTextureTool, "render_texture_fast",
+    TextureTool_render_texture_fast, 10);
+  rb_define_singleton_method(rb_mTextureTool, "color_blend",
+                   TextureTool_color_blend, 2);
+  rb_define_singleton_method(rb_mTextureTool, "clipping_mask",
+                   TextureTool_clipping_mask, 8);
 }
 
 VALUE

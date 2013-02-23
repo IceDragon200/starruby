@@ -51,6 +51,11 @@ typedef struct {
 #endif
 } Color;
 
+typedef struct {
+  int16_t red, green, blue;
+  uint8_t saturation;
+} Tone;
+
 typedef union {
   Color color;
   uint32_t value;

@@ -1,4 +1,5 @@
 #include "starruby_private.h"
+#include "color.h"
 
 static volatile VALUE rb_cColor = Qundef;
 
@@ -8,7 +9,6 @@ strb_GetColorClass(void)
   return rb_cColor;
 }
 
-static void Color_free(Color*);
 inline void
 strb_GetColorFromRubyValue(Color* color, VALUE rbColor)
 {
@@ -17,9 +17,11 @@ strb_GetColorFromRubyValue(Color* color, VALUE rbColor)
     rb_raise(rb_eTypeError, "wrong argument type %s (expected StarRuby::Color)",
              rb_obj_classname(rbColor));
   }
+
   const Pixel p = (Pixel){
     .value = (uint32_t)(VALUE)DATA_PTR(rbColor)
   };
+
   *color = p.color;
 }
 

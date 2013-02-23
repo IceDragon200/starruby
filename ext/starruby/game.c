@@ -452,7 +452,7 @@ Game_title_eq(VALUE self, VALUE rbTitle)
   return rb_iv_set(self, "title", rb_str_dup(rbTitle));
 }
 
-static VALUE
+inline static VALUE
 Game_update_screen(VALUE self)
 {
   const Game* game;
@@ -463,17 +463,21 @@ Game_update_screen(VALUE self)
   const Texture* texture;
   Data_Get_Struct(rbScreen, Texture, texture);
   strb_CheckDisposedTexture(texture);
-  const Pixel* src = texture->pixels;
+
   SDL_Surface* sdlScreenBuffer = game->sdlScreenBuffer;
   SDL_LockSurface(sdlScreenBuffer);
+
+  const Pixel* src = texture->pixels;
   Pixel* dst = (Pixel*)sdlScreenBuffer->pixels;
+
   const int screenPadding =
     sdlScreenBuffer->pitch / sdlScreenBuffer->format->BytesPerPixel - sdlScreenBuffer->w;
-  const int textureWidth  = texture->width;
-  const int textureHeight = texture->height;
+  const unsigned int textureWidth  = texture->width;
+  const unsigned int textureHeight = texture->height;
   const int heightPadding = sdlScreenBuffer->w - texture->width + screenPadding;
-  for (int j = 0; j < textureHeight; j++, dst += heightPadding) {
-    for (int i = 0; i < textureWidth; i++, src++, dst++) {
+
+  for (unsigned int j = 0; j < textureHeight; j++, dst += heightPadding) {
+    for (unsigned int i = 0; i < textureWidth; i++, src++, dst++) {
       const uint8_t alpha = src->color.alpha;
       if (alpha == 255) {
         *dst = *src;

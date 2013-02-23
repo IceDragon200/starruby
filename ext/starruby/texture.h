@@ -130,10 +130,7 @@ typedef struct {
   int srcWidth;
   int srcX;
   int srcY;
-  int toneRed;
-  int toneGreen;
-  int toneBlue;
-  int saturation;
+  Tone tone;
   BlendType blendType;
   uint8_t alpha;
 } RenderingTextureOptions;

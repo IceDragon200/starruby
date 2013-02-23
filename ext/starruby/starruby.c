@@ -83,6 +83,7 @@ Init_starruby(void)
   strb_InitializeGame(rb_mStarRuby);
   strb_InitializeInput(rb_mStarRuby);
   strb_InitializeTexture(rb_mStarRuby);
+  strb_InitializeTextureTool(rb_mStarRuby);
 
   rb_set_end_proc(FinalizeStarRuby, Qnil);
 

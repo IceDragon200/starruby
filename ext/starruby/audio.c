@@ -1,6 +1,6 @@
 #include "starruby_private.h"
 
-#define MAX_CHANNEL_COUNT (8)
+#define MAX_CHANNEL_COUNT (16)
 
 static bool isEnabled = false;
 static bool bgmLoop = false;
@@ -103,7 +103,7 @@ Audio_play_bgm(int argc, VALUE* argv, VALUE self)
     rb_raise_sdl_mix_error();
   }
   sdlBgmStartTicks = SDL_GetTicks() - bgmPosition;
-  
+
   return Qnil;
 }
 

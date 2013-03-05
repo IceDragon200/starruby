@@ -123,8 +123,8 @@ Game_s_current(VALUE self)
 static VALUE
 RunGame(VALUE rbGame)
 {
-  const Game* game;
-  Data_Get_Struct(rbGame, Game, game);
+  //const Game* game;
+  //Data_Get_Struct(rbGame, Game, game);
   while (true) {
     Game_update_state(rbGame);
     if (RTEST(Game_window_closing(rbGame))) {

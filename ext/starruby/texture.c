@@ -2,6 +2,8 @@
 #include "starruby_private.h"
 #include <png.h>
 #include "texture.h"
+#include "vector.h"
+#include "rect.h"
 
 VALUE
 strb_GetTextureClass(void)
@@ -18,21 +20,12 @@ strb_CheckToneRange(Tone *tone)
     rb_raise(rb_eArgError, "toneGreen is out of range");
   if(tone->blue < -255 || tone->blue > 255)
     rb_raise(rb_eArgError, "toneBlue is out of range");
-  if(tone->saturation < -255 || tone->saturation > 255)
-    rb_raise(rb_eArgError, "saturation is out of range");
+  //if(tone->saturation < 0 || tone->saturation > 255)
+  //  rb_raise(rb_eArgError, "saturation is out of range");
 }
 
 static void Texture_free(Texture*);
-
-inline void
-strb_CheckTexture(VALUE rbTexture)
-{
-  Check_Type(rbTexture, T_DATA);
-  if (RDATA(rbTexture)->dfree != (RUBY_DATA_FUNC)Texture_free) {
-    rb_raise(rb_eTypeError, "wrong argument type %s (expected StarRuby::Texture)",
-             rb_obj_classname(rbTexture));
-  }
-}
+STRUCT_CHECK_TYPE_FUNC(Texture, Texture);
 
 inline bool
 strb_IsDisposedTexture(const Texture* const texture)
@@ -399,11 +392,12 @@ static VALUE
 Texture_change_hue(VALUE self, VALUE rbAngle)
 {
   const Texture* texture;
+  //Texture* newTexture;
+
   Data_Get_Struct(self, Texture, texture);
   strb_CheckDisposedTexture(texture);
   volatile VALUE rbTexture = rb_obj_dup(self);
-  Texture* newTexture;
-  Data_Get_Struct(rbTexture, Texture, newTexture);
+  //Data_Get_Struct(rbTexture, Texture, newTexture);
   Texture_change_hue_bang(rbTexture, rbAngle);
   return rbTexture;
 }
@@ -937,23 +931,23 @@ Texture_render_in_perspective(int argc, VALUE* argv, VALUE self)
   const double sinPitch = sin(options.cameraPitch);
   const double cosRoll  = cos(options.cameraRoll);
   const double sinRoll  = sin(options.cameraRoll);
-  const VectorF screenDX = {
+  const Vector3F screenDX = {
     cosRoll * cosYaw + sinRoll * sinPitch * sinYaw,
     sinRoll * -cosPitch,
     cosRoll * sinYaw - sinRoll * sinPitch * cosYaw,
   };
-  const VectorF screenDY = {
+  const Vector3F screenDY = {
     -sinRoll * cosYaw + cosRoll * sinPitch * sinYaw,
     cosRoll * -cosPitch,
     -sinRoll * sinYaw - cosRoll * sinPitch * cosYaw,
   };
   const double distance = dstWidth / (2 * (tan(options.viewAngle / 2)));
-  const PointF intersection = {
+  const Point3F intersection = {
     distance * (cosPitch * sinYaw),
     distance * sinPitch + options.cameraHeight,
     distance * (-cosPitch * cosYaw),
   };
-  const PointF screenO = {
+  const Point3F screenO = {
     intersection.x
     - options.intersectionX * screenDX.x
     - options.intersectionY * screenDY.x,
@@ -967,7 +961,7 @@ Texture_render_in_perspective(int argc, VALUE* argv, VALUE self)
   const int cameraHeight = (int)options.cameraHeight;
   const Pixel* src = srcTexture->pixels;
   Pixel* dst = dstTexture->pixels;
-  PointF screenP;
+  Point3F screenP;
   for (int j = 0; j < dstHeight; j++) {
     screenP.x = screenO.x + j * screenDY.x;
     screenP.y = screenO.y + j * screenDY.y;
@@ -2103,6 +2097,8 @@ static VALUE TextureTool_color_blend(
       dst->color.blue  = ALPHA(color.blue,  dst->color.blue,  beta);
     }
   }
+
+  return Qnil;
 }
 
 static VALUE TextureTool_clipping_mask(
@@ -2155,13 +2151,15 @@ static VALUE TextureTool_clipping_mask(
       dst->color.green = src->color.green;
       dst->color.blue  = src->color.blue;
       dst->color.alpha = DIV255(dst->color.alpha * src->color.alpha);
-    }
-  }
+    };
+  };
+
+  return Qnil;
 }
 
 VALUE rb_mTextureTool = Qnil;
 
-void strb_InitializeTextureTool(VALUE rb_mStarRuby)
+VALUE strb_InitializeTextureTool(VALUE rb_mStarRuby)
 {
   rb_mTextureTool = rb_define_module("TextureTool");
   rb_define_singleton_method(
@@ -2171,6 +2169,18 @@ void strb_InitializeTextureTool(VALUE rb_mStarRuby)
                    TextureTool_color_blend, 2);
   rb_define_singleton_method(rb_mTextureTool, "clipping_mask",
                    TextureTool_clipping_mask, 8);
+
+  return rb_mTextureTool;
+}
+
+static VALUE
+Texture_rect(VALUE self)
+{
+  Texture *texture;
+  Data_Get_Struct(self, Texture, texture);
+  VALUE rbArgv[4] = { INT2NUM(0), INT2NUM(0),
+                      INT2NUM(texture->width), INT2NUM(texture->height) };
+  return rb_class_new_instance(4, rbArgv, strb_GetRectClass());
 }
 
 VALUE
@@ -2236,6 +2246,9 @@ strb_InitializeTexture(VALUE rb_mStarRuby)
                    Texture_undump, 2);
   rb_define_method(rb_cTexture, "width",
                    Texture_width, 0);
+
+  rb_define_method(rb_cTexture, "rect",
+                   Texture_rect, 0);
 
   symbol_add            = ID2SYM(rb_intern("add"));
   symbol_alpha          = ID2SYM(rb_intern("alpha"));

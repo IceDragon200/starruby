@@ -1,0 +1,120 @@
+= README
+
+== Name
+
+rcairo
+
+== Description
+
+Ruby bindings for cairo // cairo extension for Ruby
+
+http://cairographics.org/
+
+== Dependencies
+
+* ruby >= 1.8 (1.9.2 also supported!)
+* cairo >= 1.2.0 (1.12.0 also supported!)
+
+== Install
+
+=== Package
+
+This way is recommended.
+
+  # gem install cairo
+
+=== Self build
+
+For experimental users.
+
+Download rcairo-X.Y.Z.tar.gz from http://cairographics.org/releases/
+
+Extracting:
+  % tar xvzf rcairo-X.Y.Z.tar.gz
+
+Compiling:
+  % cd rcairo-X.Y.Z
+  % ruby extconf.rb    # to check for dependencies and create Makefiles
+  % make               # to compile
+
+  # make install       # to install the cairo extension.
+		       # The samples in the samples folder should be able
+		       # to run before installation except text-on-path.rb
+		       # and text2.rb. They uses Ruby/Pango with rcairo
+		       # support. So you need to install rcairo and build
+		       # Ruby/Pango with it before you run them.
+
+Options to extconf.rb:
+
+  * --without-vendor-override: Use system libraries instead of those found in
+                               vendor/local for compiling
+
+== Windows
+
+cairo-X.Y.Z-x86-mingw32.gem includes cairo related binaries.
+
+* cairo related binaries:
+  http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/
+
+  * cairo-X.Y.Z-a_win32.zip
+  * cairo-dev-X.Y.Z-a_win32.zip
+  * libpng-X.Y.Z-a_win32.zip
+  * zlib-X.Y.Z-a_win32.zip
+  * expat_X.Y.Z-a_win32.zip
+  * fontconfig_X.Y.Z-a_win32.zip
+  * freetype_X.Y.Z-a_win32.zip
+
+== Documents
+
+* Reference manual:
+  http://cairo.rubyforge.org/doc/
+* Repository of the reference manual:
+  http://github.com/rcairo/doc
+* An article for rcairo on Rubyst Magazine a.k.a. RubiMa (in Japanese):
+  http://jp.rubyist.net/magazine/?0019-cairo
+
+== Source
+
+There is the rcairo repository at GitHub:
+http://github.com/rcairo/rcairo
+
+== Mailing list
+
+If you have trouble with cairo or rcairo, or you have some ideas for how
+it could be improved, please feel free to send a message to the cairo
+mailinglist at cairo@cairographics.org , which is archived at
+
+http://cairographics.org/cgi-bin/mailman/listinfo/cairo
+
+== Thanks
+
+* Yoshinao Muramatsu: win32 surface support patch.
+* NANKI Haruo: some bug fix patches.
+* Paul van Tilburg:
+  * some patches that support ruby 1.9.
+  * some suggestions.
+* Binzo: some bug reports and fixed that.
+* kimura wataru:
+  * some advices for RubyCocoa.
+  * reports a bug.
+* OBATA Akio:
+  * reports a bug.
+  * some suggestions.
+* James Healy: reports bugs.
+* Carsten Bormann: A suggestion.
+* Davide Rambaldi: A suggestion.
+* Yusuke ENDOH: reports a bug.
+* Yuta Taniguchi: a bug fix patch.
+* kimura wataru:
+  * reports a bug.
+  * some patches.
+* Masayas TARUI:
+  * Windows support.
+* Stefan Salewski: reports a bug.
+* Mamoru Tasaka: reports bugs.
+* Nikolai Weibull: reports problems.
+* Will Bryant: reports a bug.
+* Vasily Fedoseyev: fixes a bug.
+* Eric C.: reports a bug.
+* Cédric Boutillier: reports a bug.
+* tmtms: reports a bug.

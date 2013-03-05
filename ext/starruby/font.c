@@ -1,10 +1,10 @@
 #include "starruby_private.h"
 
 #ifdef HAVE_FONTCONFIG_FONTCONFIG_H
-#include <fontconfig/fontconfig.h>
+  #include <fontconfig/fontconfig.h>
 #endif
 #ifdef WIN32
-static volatile VALUE rbWindowsFontDirPathSymbol = Qundef;
+  static volatile VALUE rbWindowsFontDirPathSymbol = Qundef;
 #endif
 
 static VALUE rbFontCache = Qundef;
@@ -22,15 +22,7 @@ typedef struct FontFileInfo {
 static FontFileInfo* fontFileInfos;
 
 static void Font_free(Font*);
-inline void
-strb_CheckFont(VALUE rbFont)
-{
-  Check_Type(rbFont, T_DATA);
-  if (RDATA(rbFont)->dfree != (RUBY_DATA_FUNC)Font_free) {
-    rb_raise(rb_eTypeError, "wrong argument type %s (expected StarRuby::Font)",
-             rb_obj_classname(rbFont));
-  }
-}
+STRUCT_CHECK_TYPE_FUNC(Font, Font);
 
 static void
 SearchFont(VALUE rbFilePathOrName,
@@ -173,7 +165,7 @@ Font_s_new(int argc, VALUE* argv, VALUE self)
   } else if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_ttc_index))) {
     ttcIndex = NUM2INT(val);
   }
-  volatile VALUE rbHashKey = rb_str_dup(rbRealFilePath);  
+  volatile VALUE rbHashKey = rb_str_dup(rbRealFilePath);
   char temp[256];
   // TODO: change the delimiter or the way to name a hash key
   rb_str_cat2(rbHashKey, ";size=");

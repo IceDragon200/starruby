@@ -1,5 +1,4 @@
 #include "starruby_private.h"
-#include "color.h"
 
 static volatile VALUE rb_cColor = Qundef;
 
@@ -9,14 +8,13 @@ strb_GetColorClass(void)
   return rb_cColor;
 }
 
+static void Color_free(Color*);
+STRUCT_CHECK_TYPE_FUNC(Color, Color);
+
 inline void
 strb_GetColorFromRubyValue(Color* color, VALUE rbColor)
 {
-  Check_Type(rbColor, T_DATA);
-  if (RDATA(rbColor)->dfree != (RUBY_DATA_FUNC)Color_free) {
-    rb_raise(rb_eTypeError, "wrong argument type %s (expected StarRuby::Color)",
-             rb_obj_classname(rbColor));
-  }
+  strb_CheckColor(rbColor);
 
   const Pixel p = (Pixel){
     .value = (uint32_t)(VALUE)DATA_PTR(rbColor)

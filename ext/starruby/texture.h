@@ -1,3 +1,7 @@
+/*
+  starruby/ext/starruby/texture.h
+  vr 0.61
+ */
 #ifndef STARRUBY_TEXTURE_H
 #define STARRUBY_TEXTURE_H
 
@@ -92,17 +96,6 @@ typedef enum {
 typedef struct {
   double a, b, c, d, tx, ty;
 } AffineMatrix;
-
-typedef struct {
-  int x, y, z;
-} Point;
-
-typedef struct {
-  double x, y, z;
-} PointF;
-
-typedef Point Vector;
-typedef PointF VectorF;
 
 typedef struct {
   int cameraX;

@@ -1,0 +1,186 @@
+/*
+  StarRuby
+    Rect
+ */
+#include "starruby_private.h"
+#include "rect.h"
+
+static VALUE rb_cRect = Qundef;
+
+VALUE
+strb_GetRectClass(void)
+{
+  return rb_cRect;
+}
+
+static void Rect_free(Rect*);
+STRUCT_CHECK_TYPE_FUNC(Rect, Rect);
+
+STRUCT_ATTR_ACCESSOR(Rect, Rect, x, INT2NUM, NUM2INT);
+STRUCT_ATTR_ACCESSOR(Rect, Rect, y, INT2NUM, NUM2INT);
+STRUCT_ATTR_ACCESSOR(Rect, Rect, width, INT2NUM, NUM2INT);
+STRUCT_ATTR_ACCESSOR(Rect, Rect, height, INT2NUM, NUM2INT);
+
+static VALUE
+Rect_set(int argc, VALUE *argv, VALUE self)
+{
+  const VALUE zero = INT2NUM(0);
+  volatile VALUE rbRect, rbX, rbY, rbWidth, rbHeight;
+  volatile Rect *rect, *src_rect;
+
+  Data_Get_Struct(self, Rect, rect);
+
+  if(argc == 0)
+  {
+    rbX      = zero;
+    rbY      = zero;
+    rbWidth  = zero;
+    rbHeight = zero;
+  }
+  else if(argc == 1)
+  {
+    rb_scan_args(argc, argv, "10", &rbRect);
+    strb_CheckRect(rbRect);
+    Data_Get_Struct(rbRect, Rect, src_rect);
+
+    rbX = INT2NUM(src_rect->x);
+    rbY = INT2NUM(src_rect->y);
+    rbWidth = INT2NUM(src_rect->width);
+    rbHeight = INT2NUM(src_rect->height);
+  }
+  else
+  {
+    rb_scan_args(argc, argv, "40", &rbX, &rbY, &rbWidth, &rbHeight);
+  }
+  rect->x = NUM2INT(rbX);
+  rect->y = NUM2INT(rbY);
+  rect->width = NUM2INT(rbWidth);
+  rect->height = NUM2INT(rbHeight);
+
+  return self;
+}
+
+static VALUE
+Rect_init_copy(VALUE self, VALUE rbOrgRect)
+{
+  volatile Rect *org_rect, *rect;
+  Data_Get_Struct(self, Rect, rect);
+  Data_Get_Struct(rbOrgRect, Rect, org_rect);
+
+  rect->x = org_rect->x;
+  rect->y = org_rect->y;
+  rect->width = org_rect->width;
+  rect->height = org_rect->height;
+
+  return self;
+}
+
+static VALUE
+Rect_to_a(VALUE self)
+{
+  Rect *rect;
+  volatile VALUE ary;
+
+  Data_Get_Struct(self, Rect, rect);
+
+  ary = rb_ary_new();
+  rb_ary_push(ary, INT2NUM(rect->x));
+  rb_ary_push(ary, INT2NUM(rect->y));
+  rb_ary_push(ary, INT2NUM(rect->width));
+  rb_ary_push(ary, INT2NUM(rect->height));
+
+  return ary;
+}
+
+static VALUE
+Rect_empty(VALUE self)
+{
+  Rect *rect;
+  Data_Get_Struct(self, Rect, rect);
+
+  rect->x = 0;
+  rect->y = 0;
+  rect->width = 0;
+  rect->height = 0;
+
+  return self;
+}
+
+static VALUE
+Rect_is_empty(VALUE self)
+{
+  Rect *rect;
+  Data_Get_Struct(self, Rect, rect);
+  return (rect->width == 0 || rect->height == 0) ? Qtrue : Qfalse;
+}
+
+// Marshalling
+static VALUE
+Rect_dump(VALUE self, VALUE rbDepth)
+{
+  return rb_funcall(Rect_to_a(self),
+    rb_intern("pack"), 1, rb_str_new2("l4\0"));
+}
+
+static VALUE
+Rect_load(VALUE klass, VALUE rbDStr)
+{
+  volatile VALUE rbUAry = rb_funcall(
+    rbDStr, rb_intern("unpack"), 1, rb_str_new2("l4\0"));
+
+  VALUE rbArgv[4] = {
+    rb_ary_entry(rbUAry, 0), rb_ary_entry(rbUAry, 1), // x, y
+    rb_ary_entry(rbUAry, 2), rb_ary_entry(rbUAry, 3)  // width, height
+  };
+
+  return rb_class_new_instance(4, rbArgv, klass);
+}
+
+// Alloc / DeAlloc
+static void
+Rect_free(Rect *rect)
+{
+  free(rect);
+}
+
+static VALUE
+Rect_alloc(VALUE klass)
+{
+  Rect* rect = ALLOC(Rect);
+  rect->x      = 0;
+  rect->y      = 0;
+  rect->width  = 0;
+  rect->height = 0;
+  return Data_Wrap_Struct(klass, 0, Rect_free, rect);
+}
+
+VALUE strb_InitializeRect(VALUE rb_mStarRuby)
+{
+  rb_cRect = rb_define_class_under(rb_mStarRuby, "Rect", rb_cObject);
+  rb_define_alloc_func(rb_cRect, Rect_alloc);
+
+  rb_define_method(rb_cRect, "set", Rect_set, -1);
+  rb_define_alias(rb_cRect, "initialize", "set");
+
+  rb_define_method(rb_cRect, "initialize_copy", Rect_init_copy, 1);
+
+  rb_define_method(rb_cRect, "x", Rect_get_x, 0);
+  rb_define_method(rb_cRect, "y", Rect_get_y, 0);
+  rb_define_method(rb_cRect, "width", Rect_get_width, 0);
+  rb_define_method(rb_cRect, "height", Rect_get_height, 0);
+
+  rb_define_method(rb_cRect, "x=", Rect_set_x, 1);
+  rb_define_method(rb_cRect, "y=", Rect_set_y, 1);
+  rb_define_method(rb_cRect, "width=", Rect_set_width, 1);
+  rb_define_method(rb_cRect, "heigh=", Rect_set_height, 1);
+
+  rb_define_method(rb_cRect, "empty", Rect_empty, 0);
+  rb_define_method(rb_cRect, "empty?", Rect_is_empty, 0);
+
+  rb_define_method(rb_cRect, "to_a", Rect_to_a, 0);
+
+  rb_define_method(rb_cRect, "_dump", Rect_dump, 1);
+  rb_define_singleton_method(rb_cRect, "_load", Rect_load, 1);
+
+  return rb_cRect;
+}

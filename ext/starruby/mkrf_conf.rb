@@ -2,7 +2,7 @@ require 'rubygems'
 require 'mkmf'
 require 'mkrf'
 
-Mkrf::Generator.new( 'starruby' ) do |g|
+Mkrf::Generator.new( 'starruby', ["*.c", "*.cpp"] ) do |g|
   g.cflags << ' -std=c99'
 
   # remove error warnings
@@ -20,9 +20,9 @@ Mkrf::Generator.new( 'starruby' ) do |g|
   g.ldshared += ' ' + `#{sdl_config} --libs`.chomp
   g.include_library('SDL', 'SDL_main')
 
-  if g.include_library("SDL_mixer","Mix_OpenAudio") then
-    g.cflags += " -D HAVE_SDL_MIXER "
-  end
+  #if g.include_library("SDL_mixer","Mix_OpenAudio") then
+  #  g.cflags += " -D HAVE_SDL_MIXER "
+  #end
 
   if g.include_library("SGE","sge_Line") then
     g.cflags += " -D HAVE_SGE "

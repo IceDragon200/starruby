@@ -1,4 +1,5 @@
 #include "starruby_private.h"
+#include "starruby.h"
 
 static volatile VALUE rb_eStarRubyError = Qundef;
 
@@ -22,16 +23,16 @@ strb_GetCompletePath(VALUE rbPath, bool raiseNotFoundError)
     }
     rb_funcall(rbPathes, rb_intern("compact!"), 0);
     switch (RARRAY_LEN(rbPathes)) {
-    case 0:
-      if (raiseNotFoundError) {
-        rb_raise(rb_path2class("Errno::ENOENT"), "%s", path);
-      }
-      break;
-    case 1:
-      return RARRAY_PTR(rbPathes)[0];
-    default:
-      rb_raise(rb_eArgError, "ambiguous path: %s", path);
-      break;
+      case 0:
+        if (raiseNotFoundError) {
+          rb_raise(rb_path2class("Errno::ENOENT"), "%s", path);
+        }
+        break;
+      case 1:
+        return RARRAY_PTR(rbPathes)[0];
+      default:
+        rb_raise(rb_eArgError, "ambiguous path: %s", path);
+        break;
     }
     return Qnil;
   } else {
@@ -74,23 +75,28 @@ Init_starruby(void)
   strb_InitializeSdlFont();
   strb_InitializeSdlInput();
 
-  volatile VALUE rbVersion = rb_str_new2("0.4.0");
+  volatile VALUE rbVersion = rb_str_new2("0.5.1i");
   OBJ_FREEZE(rbVersion);
   rb_define_const(rb_mStarRuby, "VERSION", rbVersion);
   strb_InitializeAudio(rb_mStarRuby);
   strb_InitializeColor(rb_mStarRuby);
+  strb_InitializeContext(rb_mStarRuby);
   strb_InitializeFont(rb_mStarRuby);
   strb_InitializeGame(rb_mStarRuby);
   strb_InitializeInput(rb_mStarRuby);
+  strb_InitializeMatrix(rb_mStarRuby);
+  strb_InitializeRect(rb_mStarRuby);
   strb_InitializeTexture(rb_mStarRuby);
   strb_InitializeTextureTool(rb_mStarRuby);
+  strb_InitializeTransition(rb_mStarRuby);
+  strb_InitializeVector(rb_mStarRuby);
 
   rb_set_end_proc(FinalizeStarRuby, Qnil);
 
-  rb_define_method(rb_cNumeric, "degree",  Numeric_degree, 0);
-  rb_define_method(rb_cNumeric, "degrees", Numeric_degree, 0);
+  rb_define_method(rb_cNumeric, "degree_to_radian", Numeric_degree, 0);
 
 #ifdef DEBUG
   strb_TestInput();
 #endif
 }
+

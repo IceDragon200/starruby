@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <SDL.h>
-#include <SDL_mixer.h>
+//#include <SDL_mixer.h>
 #include <SDL_ttf.h>
 #include <SDL_opengl.h>
 
@@ -33,7 +33,6 @@
 #  define SHGFP_TYPE_CURRENT (0)
 # endif
 #endif
-#include "starruby.h"
 
 #ifndef PI
 # ifdef M_PI
@@ -90,21 +89,19 @@ typedef struct {
 VALUE strb_GetColorClass(void);
 VALUE strb_GetStarRubyErrorClass(void);
 VALUE strb_GetTextureClass(void);
+VALUE strb_GetRectClass(void);
 
 VALUE strb_GetCompletePath(VALUE, bool);
 
 void strb_GetColorFromRubyValue(Color*, VALUE);
 
-void strb_CheckFont(VALUE);
-void strb_CheckTexture(VALUE);
-
-VALUE strb_InitializeAudio(VALUE rb_mStarRuby);
-VALUE strb_InitializeColor(VALUE rb_mStarRuby);
-VALUE strb_InitializeGame(VALUE rb_mStarRuby);
-VALUE strb_InitializeFont(VALUE rb_mStarRuby);
-VALUE strb_InitializeInput(VALUE rb_mStarRuby);
-VALUE strb_InitializeStarRubyError(VALUE rb_mStarRuby);
-VALUE strb_InitializeTexture(VALUE rb_mStarRuby);
+void strb_CheckFont(VALUE rbFont);
+void strb_CheckTexture(VALUE rbTexture);
+void strb_CheckRect(VALUE rbRect);
+void strb_CheckVector2I(VALUE rbVector2I);
+void strb_CheckVector2F(VALUE rbVector2F);
+void strb_CheckVector3I(VALUE rbVector3I);
+void strb_CheckVector3F(VALUE rbVector3F);
 
 void strb_UpdateInput(void);
 
@@ -123,12 +120,49 @@ void strb_CheckDisposedTexture(const Texture* const);
 bool strb_IsDisposedTexture(const Texture* const);
 
 #ifdef DEBUG
-#include <assert.h>
-void strb_TestInput(void);
+  #include <assert.h>
+  void strb_TestInput(void);
 #endif
 
 #ifndef HAVE_RUBY_ENCODING_H
-#define rb_intern_str(str) ID2SYM(rb_intern(StringValueCStr(str)))
+  #define rb_intern_str(str) ID2SYM(rb_intern(StringValueCStr(str)))
 #endif
 
+#ifndef NUMERIC_P
+  #define NUMERIC_P(obj) (TYPE(obj) == T_FIXNUM ? true : (TYPE(obj) == T_FLOAT ? true : (TYPE(obj) == T_BIGNUM ? true : false)))
 #endif
+
+#define STRUCT_ATTR_ACCESSOR(namespace, strct, attribute, reader_conv, writer_conv) \
+  static VALUE namespace ## _get_ ## attribute(VALUE self) \
+  { \
+    strct *obj1; \
+    Data_Get_Struct(self, strct, obj1); \
+    return reader_conv(obj1->attribute); \
+  } \
+  static VALUE namespace ## _set_ ## attribute(VALUE self, VALUE arg1) \
+  { \
+    strct *obj1; \
+    Data_Get_Struct(self, strct, obj1); \
+    obj1->attribute = writer_conv(arg1); \
+    return Qnil; \
+  }
+
+#define STRUCT_FREE(namespace, strct) \
+  static void namespace ## _free(strct *arg1)  \
+  { \
+    free(arg1);\
+  }
+
+#define STRUCT_CHECK_TYPE_FUNC(namespace, strct) \
+  void \
+  strb_Check ## namespace(VALUE rbObj) \
+  { \
+    Check_Type(rbObj, T_DATA); \
+    if (RDATA(rbObj)->dfree != (RUBY_DATA_FUNC)namespace ## _free) { \
+      rb_raise(rb_eTypeError, "wrong argument type %s, expected StarRuby::" #strct, \
+               rb_obj_classname(rbObj)); \
+    } \
+  }
+
+#endif
+

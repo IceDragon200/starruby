@@ -78,7 +78,7 @@ Input_mouse_location_eq(VALUE self, VALUE rbValue)
     rb_assoc_new(INT2NUM(mouseLocationX / windowScale),
                  INT2NUM(mouseLocationY / windowScale));
   OBJ_FREEZE(rbMouseLocation);
-  rb_iv_set(self, "mouse_location", rbMouseLocation);  
+  rb_iv_set(self, "mouse_location", rbMouseLocation);
   return rbValue;
 }
 
@@ -290,7 +290,7 @@ strb_InitializeSdlInput()
   keyboardKeys->sdlKey   = 0;
   keyboardKeys->state    = 0;
   keyboardKeys->next     = NULL;
-  
+
   KeyboardKey* currentKey = keyboardKeys;
   for (int i = 0; i < SDLK_z - SDLK_a + 1; i++) {
     ADD_KEY(currentKey, ((char[]){'a' + i, '\0'}), SDLK_a + i);
@@ -421,7 +421,7 @@ strb_FinalizeInput(void)
   }
   free(gamepads);
   gamepads = NULL;
-  
+
   KeyboardKey* key = keyboardKeys;
   while (key) {
     KeyboardKey* nextKey = key->next;

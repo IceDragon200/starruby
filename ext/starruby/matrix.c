@@ -5,10 +5,11 @@
     dm 26/02/2013
  */
 
-#include "starruby_private.h"
+#include "starruby.prv.h"
 #include "matrix.prv.h"
 
 static ID sym_size = Qundef;
+static VALUE rb_cMatrix = Qundef;
 static VALUE rb_cMatrixI = Qundef;
 
 void strb_MatrixI_free(MatrixI *matrix)
@@ -303,7 +304,8 @@ MatrixI_data_ary(VALUE self)
 VALUE strb_InitializeMatrix(VALUE rb_mStarRuby)
 {
   sym_size = rb_intern("size");
-  rb_cMatrixI = rb_define_class_under(rb_mStarRuby, "MatrixI", rb_cObject);
+  rb_cMatrix = rb_define_class_under(rb_mStarRuby, "Matrix", rb_cObject);
+  rb_cMatrixI = rb_define_class_under(rb_mStarRuby, "MatrixI", rb_cMatrix);
 
   rb_define_alloc_func(rb_cMatrixI, MatrixI_alloc);
 

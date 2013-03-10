@@ -1,7 +1,6 @@
-#include "starruby_private.h"
 #include "starruby.h"
 
-static volatile VALUE rb_eStarRubyError = Qundef;
+VALUE rb_eStarRubyError = Qundef;
 
 VALUE
 strb_GetCompletePath(VALUE rbPath, bool raiseNotFoundError)
@@ -75,19 +74,20 @@ Init_starruby(void)
   strb_InitializeSdlFont();
   strb_InitializeSdlInput();
 
-  volatile VALUE rbVersion = rb_str_new2("0.5.1i");
+  volatile VALUE rbVersion = rb_str_new2(STRB_VERSION_S);
   OBJ_FREEZE(rbVersion);
   rb_define_const(rb_mStarRuby, "VERSION", rbVersion);
   strb_InitializeAudio(rb_mStarRuby);
   strb_InitializeColor(rb_mStarRuby);
-  strb_InitializeContext(rb_mStarRuby);
   strb_InitializeFont(rb_mStarRuby);
   strb_InitializeGame(rb_mStarRuby);
   strb_InitializeInput(rb_mStarRuby);
   strb_InitializeMatrix(rb_mStarRuby);
   strb_InitializeRect(rb_mStarRuby);
+  strb_InitializeTable(rb_mStarRuby);
   strb_InitializeTexture(rb_mStarRuby);
   strb_InitializeTextureTool(rb_mStarRuby);
+  strb_InitializeTone(rb_mStarRuby);
   strb_InitializeTransition(rb_mStarRuby);
   strb_InitializeVector(rb_mStarRuby);
 

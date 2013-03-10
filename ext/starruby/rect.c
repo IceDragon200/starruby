@@ -2,7 +2,7 @@
   StarRuby
     Rect
  */
-#include "starruby_private.h"
+#include "starruby.prv.h"
 #include "rect.h"
 
 static VALUE rb_cRect = Qundef;
@@ -111,7 +111,7 @@ Rect_is_empty(VALUE self)
 {
   Rect *rect;
   Data_Get_Struct(self, Rect, rect);
-  return (rect->width == 0 || rect->height == 0) ? Qtrue : Qfalse;
+  return CBOOL2RUBY(rect->width == 0 || rect->height == 0);
 }
 
 // Marshalling
@@ -154,6 +154,38 @@ Rect_alloc(VALUE klass)
   return Data_Wrap_Struct(klass, 0, Rect_free, rect);
 }
 
+static VALUE
+Rect_is_equal(VALUE self, VALUE rbOther)
+{
+  if(self == rbOther) {
+    return Qtrue;
+  }
+  if(!rb_obj_is_kind_of(rbOther, rb_cRect)) {
+    return Qfalse;
+  }
+
+  Rect *rect1, *rect2;
+  Data_Get_Struct(self, Rect, rect1);
+  Data_Get_Struct(rbOther, Rect, rect2);
+
+  return CBOOL2RUBY(rect1->x == rect2->x &&
+                    rect1->y == rect2->y &&
+                    rect1->width == rect2->width &&
+                    rect1->height == rect2->height);
+}
+
+static VALUE
+Rect_to_s(VALUE self)
+{
+  Rect *rect;
+  Data_Get_Struct(self, Rect, rect);
+  char str[256];
+  snprintf(str, sizeof(str),
+           "#<StarRuby::Rect x=%d, y=%d, width=%d, height=%d>",
+           rect->x, rect->y, rect->width, rect->height);
+  return rb_str_new2(str);
+}
+
 VALUE strb_InitializeRect(VALUE rb_mStarRuby)
 {
   rb_cRect = rb_define_class_under(rb_mStarRuby, "Rect", rb_cObject);
@@ -172,15 +204,19 @@ VALUE strb_InitializeRect(VALUE rb_mStarRuby)
   rb_define_method(rb_cRect, "x=", Rect_set_x, 1);
   rb_define_method(rb_cRect, "y=", Rect_set_y, 1);
   rb_define_method(rb_cRect, "width=", Rect_set_width, 1);
-  rb_define_method(rb_cRect, "heigh=", Rect_set_height, 1);
+  rb_define_method(rb_cRect, "height=", Rect_set_height, 1);
 
   rb_define_method(rb_cRect, "empty", Rect_empty, 0);
   rb_define_method(rb_cRect, "empty?", Rect_is_empty, 0);
 
   rb_define_method(rb_cRect, "to_a", Rect_to_a, 0);
+  rb_define_method(rb_cRect, "to_s", Rect_to_s, 0);
 
   rb_define_method(rb_cRect, "_dump", Rect_dump, 1);
   rb_define_singleton_method(rb_cRect, "_load", Rect_load, 1);
+
+  rb_define_method(rb_cRect, "==", Rect_is_equal, 1);
+  rb_define_method(rb_cRect, "eql?", Rect_is_equal, 1);
 
   return rb_cRect;
 }

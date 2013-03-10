@@ -20,7 +20,10 @@
   void strb_ArrayI_free(ArrayI *array);
   void strb_ArrayF_free(ArrayF *array);
   bool strb_ArrayI_comp(ArrayI *a, ArrayI *b);
+  VALUE strb_ArrayI_to_ruby(ArrayI *array);
+  VALUE strb_ArrayF_to_ruby(ArrayF *array);
 
+  /* Inline */
   inline void
   strb_ArrayI_copy(ArrayI *trg_array, ArrayI *src_array)
   {
@@ -34,9 +37,6 @@
     uint32_t size = trg_array->size = src_array->size;
     MEMCPY(trg_array->data, src_array->data, double, size);
   }
-
-  VALUE strb_ArrayI_to_ruby(ArrayI *array);
-  VALUE strb_ArrayF_to_ruby(ArrayF *array);
 
   // Helpers
   inline uint32_t strb_ArrayI_size(ArrayI *array)

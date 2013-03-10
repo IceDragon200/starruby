@@ -7,7 +7,7 @@
     dc 24/02/2013
     dm 24/02/2013
  */
-#include "starruby_private.h"
+#include "starruby.prv.h"
 #include "vector.h"
 #include "vector.prv.h"
 
@@ -52,6 +52,7 @@ VECTOR_MARSHAL3(Vector3I, Vector3I, INT2NUM, NUM2INT);
 VECTOR_MARSHAL2(Vector2F, Vector2F, DBL2NUM, NUM2DBL);
 VECTOR_MARSHAL3(Vector3F, Vector3F, DBL2NUM, NUM2DBL);
 
+static VALUE rb_cVector = Qundef;
 static VALUE rb_cVector2I = Qundef;
 static VALUE rb_cVector2F = Qundef;
 static VALUE rb_cVector3I = Qundef;
@@ -59,10 +60,11 @@ static VALUE rb_cVector3F = Qundef;
 
 VALUE strb_InitializeVector(VALUE rb_mStarRuby)
 {
-  rb_cVector2I = rb_define_class_under(rb_mStarRuby, "Vector2I", rb_cObject);
-  rb_cVector2F = rb_define_class_under(rb_mStarRuby, "Vector2F", rb_cObject);
-  rb_cVector3I = rb_define_class_under(rb_mStarRuby, "Vector3I", rb_cObject);
-  rb_cVector3F = rb_define_class_under(rb_mStarRuby, "Vector3F", rb_cObject);
+  rb_cVector   = rb_define_class_under(rb_mStarRuby, "Vector", rb_cObject);
+  rb_cVector2I = rb_define_class_under(rb_mStarRuby, "Vector2I", rb_cVector);
+  rb_cVector2F = rb_define_class_under(rb_mStarRuby, "Vector2F", rb_cVector);
+  rb_cVector3I = rb_define_class_under(rb_mStarRuby, "Vector3I", rb_cVector);
+  rb_cVector3F = rb_define_class_under(rb_mStarRuby, "Vector3F", rb_cVector);
 
   rb_define_alloc_func(rb_cVector2I, Vector2I_alloc);
   rb_define_alloc_func(rb_cVector3I, Vector3I_alloc);

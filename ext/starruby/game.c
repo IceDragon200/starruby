@@ -1,4 +1,4 @@
-#include "starruby_private.h"
+#include "starruby.prv.h"
 
 static volatile VALUE rb_cGame     = Qundef;
 static volatile VALUE rb_mStarRuby = Qundef;
@@ -76,7 +76,7 @@ strb_GetScreenSize(int* width, int* height)
     volatile VALUE rbScreen = game->screen;
     const Texture* screen;
     Data_Get_Struct(rbScreen, Texture, screen);
-    if (!strb_IsDisposedTexture(screen)) {
+    if (!strb_Texture_is_disposed(screen)) {
       *width  = screen->width;
       *height = screen->height;
     } else {
@@ -472,15 +472,17 @@ Game_update_screen(VALUE self)
 
   const int screenPadding =
     sdlScreenBuffer->pitch / sdlScreenBuffer->format->BytesPerPixel - sdlScreenBuffer->w;
-  const unsigned int textureWidth  = texture->width;
-  const unsigned int textureHeight = texture->height;
+  const uint textureWidth  = texture->width;
+  const uint textureHeight = texture->height;
   const int heightPadding = sdlScreenBuffer->w - texture->width + screenPadding;
 
   for (unsigned int j = 0; j < textureHeight; j++, dst += heightPadding) {
     for (unsigned int i = 0; i < textureWidth; i++, src++, dst++) {
       const uint8_t alpha = src->color.alpha;
       if (alpha == 255) {
-        *dst = *src;
+        dst->color.red   = src->color.red;
+        dst->color.green = src->color.green;
+        dst->color.blue  = src->color.blue;
       } else if (alpha) {
         dst->color.red   = DIV255(src->color.red   * alpha);
         dst->color.green = DIV255(src->color.green * alpha);

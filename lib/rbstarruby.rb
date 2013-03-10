@@ -2,6 +2,6 @@
 # starruby/lib/starruby.rb
 #
 direc = File.dirname(__FILE__)
-%w(starruby chipmunk cairo).each do |fn|
-  require File.join(direc, fn)
-end
+require File.join(direc, 'starruby')
+require File.join(direc, '..', 'ext', 'cairo', 'lib', 'cairo')
+

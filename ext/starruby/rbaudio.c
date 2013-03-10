@@ -1,4 +1,4 @@
-#include "starruby_private.h"
+#include "starruby.prv.h"
 #include "audio.h"
 
 #define MAX_CHANNEL_COUNT 16

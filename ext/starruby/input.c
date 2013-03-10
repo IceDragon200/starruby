@@ -1,4 +1,4 @@
-#include "starruby_private.h"
+#include "starruby.prv.h"
 
 typedef struct KeyboardKey {
   VALUE rbSymbol;

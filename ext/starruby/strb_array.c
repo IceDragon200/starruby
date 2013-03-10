@@ -5,24 +5,11 @@
     dc 26/02/2013
     dm 26/02/2013
  */
-#include "starruby_private.h"
+#include "starruby.prv.h"
 #include "strb_array.prv.h"
-
-#define ARRAY_ALLOCATOR(strct, datatype) \
-strct* strb_Alloc ## strct(uint32_t size, datatype default_val) \
-{ \
-  strct *array = ALLOC(strct); \
-  array->size = size; \
-  array->data = ALLOC_N(datatype, size); \
-  for(uint32_t n = 0; n < size; n++) \
-    array->data[n] = default_val; \
-  return array; \
-}
 
 ARRAY_ALLOCATOR(ArrayI, int32_t);
 ARRAY_ALLOCATOR(ArrayF, double);
-
-#undef ARRAY_ALLOCATOR
 
 void strb_ArrayI_free(ArrayI *array)
 {
@@ -45,10 +32,8 @@ ARRAY_FROM_RUBY_FUNC(ArrayF, 0.0, NUM2DBL);
 bool strb_ArrayI_comp(ArrayI *a, ArrayI *b)
 {
   if(a->size != b->size) return false;
-  for(uint32_t i = 0; i < a->size; i++)
-  {
-    if(a->data[i] != b->data[i])
-    {
+  for(uint32_t i = 0; i < a->size; i++) {
+    if(a->data[i] != b->data[i]) {
       return false;
     }
   }

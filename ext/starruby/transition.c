@@ -1,6 +1,7 @@
-#include "starruby_private.h"
-#include "transition.h"
+#include "starruby.prv.h"
 #include "rect.h"
+#include "texture.h"
+#include "transition.h"
 
 #define COLOR_AVERAGE(color) (color.red + color.blue + color.green) / 3
 #define COLOR_P_AVERAGE(color) (color->red + color->blue + color->green) / 3
@@ -10,7 +11,7 @@ static VALUE rb_cTransition = Qundef;
 static void Transition_free(Transition*);
 STRUCT_CHECK_TYPE_FUNC(Transition, Transition);
 
-void Transition_check_disposed(const Transition *transition)
+void strb_CheckDisposedTransition(const Transition *transition)
 {
   if (!transition->data) {
     rb_raise(rb_eRuntimeError,
@@ -22,45 +23,109 @@ static VALUE
 Transition_set(VALUE self, VALUE rbX, VALUE rbY, VALUE rbValue)
 {
   Transition *src_transition;
-  uint32_t x = NUM2INT(rbX);
-  uint32_t y = NUM2INT(rbY);
-  uint8_t value = MIN(MAX(NUM2INT(rbValue), 0), 255);
-
   Data_Get_Struct(self, Transition, src_transition);
+  strb_CheckDisposedTransition(src_transition);
+  const int32_t x = NUM2INT(rbX);
+  const int32_t y = NUM2INT(rbY);
+  const uint8_t value = MIN(MAX(NUM2INT(rbValue), 0), 255);
+  const int32_t index = x + (y * src_transition->width);
+  const int32_t size = src_transition->width * src_transition->height;
 
-  Transition_check_disposed(src_transition);
-
-  src_transition->data[x + (y * src_transition->width)] = value;
-  return INT2FIX(value);
+  if(index >= 0 || index < size)
+    src_transition->data[x + (y * src_transition->width)] = value;
+  return Qnil;
 }
 
 static VALUE
 Transition_get(VALUE self, VALUE rbX, VALUE rbY)
 {
   Transition *src_transition;
-  uint32_t x = NUM2INT(rbX);
-  uint32_t y = NUM2INT(rbY);
-
   Data_Get_Struct(self, Transition, src_transition);
+  strb_CheckDisposedTransition(src_transition);
+  const int32_t x = NUM2INT(rbX);
+  const int32_t y = NUM2INT(rbY);
+  const int32_t index = x + (y * src_transition->width);
+  const int32_t size = src_transition->width * src_transition->height;
 
-  Transition_check_disposed(src_transition);
-
-  return INT2FIX(src_transition->data[x + (y * src_transition->width)]);
+  if(index >= 0 || index < size)
+    return INT2FIX(src_transition->data[index]);
+  else
+    return INT2FIX(0);
 }
 
 static VALUE
 TextureToTransition(VALUE klass, VALUE rbTexture)
 {
+  Texture *texture;
+  Transition *transition;
+  VALUE rbTransition;
+  strb_CheckTexture(rbTexture);
+  Data_Get_Struct(rbTexture, Texture, texture);
+  strb_CheckDisposedTexture(texture);
 
-  return Qnil;
+  rbTransition = rb_class_new_instance(2, (VALUE[]){
+                                       INT2FIX(texture->width),
+                                       INT2FIX(texture->height)},
+                                       rb_cTransition);
+
+  Data_Get_Struct(rbTransition, Transition, transition);
+
+  const uint32_t length = transition->size;
+  uint8_t *data = transition->data;
+  Color32 *pixel = (Color32*)texture->pixels;
+  for(uint32_t i = 0; i < length; i++, data++, pixel++)
+  {
+    *data = MIN(MAX((pixel->red + pixel->green + pixel->blue) / 3, 0), 255);
+  }
+  return rbTransition;
 }
 
-//
-// Texture target, Rect rect, Texture t1, Vector2I v1, Texture t2, Vector2I v2, int t
 static VALUE
-Transition_transition(self, rbTTexture, rbRct, rbT1, rbV1, rbT2, rbV2, rbt)
-  VALUE self, rbTTexture, rbRct, rbT1, rbV1, rbT2, rbV2, rbt;
+Transition_transition(self, rbTTexture, rbT1, rbT2, rbt)
+  VALUE self, rbTTexture, rbT1, rbT2, rbt;
 {
+  strb_CheckTexture(rbTTexture);
+  strb_CheckTexture(rbT1);
+  strb_CheckTexture(rbT2);
+
+  Texture *texture, *src_texture, *trg_texture;
+  Transition *transition;
+
+  Data_Get_Struct(rbTTexture, Texture, texture);
+  Data_Get_Struct(rbT1, Texture, src_texture);
+  Data_Get_Struct(rbT2, Texture, trg_texture);
+  Data_Get_Struct(self, Transition, transition);
+
+  strb_CheckDisposedTexture(texture);
+  strb_CheckDisposedTexture(src_texture);
+  strb_CheckDisposedTexture(trg_texture);
+  strb_CheckDisposedTransition(transition);
+
+  if(!strb_Texture_dimensions_match(texture, src_texture) ||
+     !strb_Texture_dimensions_match(texture, trg_texture))
+  {
+    rb_raise(rb_eArgError, "Texture dimensions must all match");
+  }
+
+  const uint8_t delta = MIN(MAX(NUM2INT(rbt), 0), 255);
+  const uint32_t height = texture->height;
+  const uint32_t width = texture->width;
+  const uint32_t ypadding = transition->width - width;
+  const uint8_t *data = transition->data;
+
+  Pixel *pixels = texture->pixels;
+  Pixel *src_pixels = src_texture->pixels;
+  Pixel *trg_pixels = trg_texture->pixels;
+
+  for(uint32_t y = 0; y < height; y++, data += ypadding) {
+    for(uint32_t x = 0; x < width; x++, data++, pixels++, src_pixels++, trg_pixels++) {
+      if(*data < delta)
+        pixels->value = trg_pixels->value;
+      else
+        pixels->value = src_pixels->value;
+      //DIV255(*data * delta)
+    }
+  }
   return Qnil;
 }
 
@@ -72,10 +137,10 @@ Transition_init_copy(VALUE self, VALUE rbTransition)
   Data_Get_Struct(self, Transition, trg_transition);
   Data_Get_Struct(rbTransition, Transition, src_transition);
 
-  Transition_check_disposed(src_transition);
+  strb_CheckDisposedTransition(src_transition);
 
   MEMCPY(trg_transition->data, src_transition->data, uint8_t,
-    src_transition->width * src_transition->height);
+         src_transition->width * src_transition->height);
 
   return Qnil;
 }
@@ -125,9 +190,72 @@ static VALUE
 Transition_alloc(VALUE klass)
 {
   Transition* transition = ALLOC(Transition);
-  transition->width = 0;
+  transition->width  = 0;
   transition->height = 0;
+  transition->data   = NULL;
   return Data_Wrap_Struct(klass, 0, Transition_free, transition);
+}
+
+static VALUE Transition_initialize(VALUE self, VALUE rbWidth, VALUE rbHeight)
+{
+  const int16_t width = NUM2INT(rbWidth);
+  const int16_t height = NUM2INT(rbHeight);
+
+  if (width <= 0)
+    rb_raise(rb_eArgError, "width must be greater than 0");
+  if (height <= 0)
+    rb_raise(rb_eArgError, "height must be greater than 0");
+
+  Transition *transition;
+  Data_Get_Struct(self, Transition, transition);
+
+  transition->width = width;
+  transition->height = height;
+  transition->size = transition->width * transition->height;
+  transition->data = ALLOC_N(uint8_t, transition->size);
+  MEMZERO(transition->data, uint8_t, transition->size);
+
+  return Qnil;
+}
+
+static VALUE
+Transition_invert_bang(VALUE self)
+{
+  Transition *transition;
+  Data_Get_Struct(self, Transition, transition);
+  strb_CheckDisposedTransition(transition);
+  uint8_t *data = transition->data;
+  for(uint32_t i = 0; i < transition->size; i++, data++) {
+    *data = 255 - *data;
+  }
+  return self;
+}
+
+static VALUE
+Transition_to_texture(VALUE self)
+{
+  Transition *transition;
+  Data_Get_Struct(self, Transition, transition);
+  strb_CheckDisposedTransition(transition);
+
+  VALUE rbTexture = rb_class_new_instance(2, (VALUE[]){
+                            INT2FIX(transition->width),
+                            INT2FIX(transition->height)},
+                            strb_GetTextureClass());
+
+  Texture *texture;
+  Data_Get_Struct(rbTexture, Texture, texture);
+
+  uint8_t *data = transition->data;
+  Pixel *pixels = texture->pixels;
+
+  for(uint32_t i = 0; i < transition->size; i++, data++, pixels++) {
+    pixels->color.red   = *data;
+    pixels->color.green = *data;
+    pixels->color.blue  = *data;
+    pixels->color.alpha = 255;
+  }
+  return rbTexture;
 }
 
 VALUE
@@ -136,17 +264,20 @@ strb_InitializeTransition(VALUE rb_mStarRuby)
   rb_cTransition = rb_define_class_under(
     rb_mStarRuby, "Transition", rb_cObject);
   rb_define_alloc_func(rb_cTransition, Transition_alloc);
-
+  rb_define_method(
+    rb_cTransition, "initialize", Transition_initialize, 2);
+  rb_define_method(
+    rb_cTransition, "initialize_copy", Transition_init_copy, 1);
   rb_define_singleton_method(
     rb_cTransition, "from_texture", TextureToTransition, 1);
 
-  rb_define_method(
-    rb_cTransition, "initialize_copy", Transition_init_copy, 1);
   rb_define_method(rb_cTransition, "width", Transition_width, 0);
   rb_define_method(rb_cTransition, "height", Transition_height, 0);
   rb_define_method(rb_cTransition, "[]", Transition_get, 2);
   rb_define_method(rb_cTransition, "[]=", Transition_set, 3);
-  rb_define_method(rb_cTransition, "transition", Transition_transition, 7);
+  rb_define_method(rb_cTransition, "transition", Transition_transition, 4);
+  rb_define_method(rb_cTransition, "invert!", Transition_invert_bang, 0);
+  rb_define_method(rb_cTransition, "to_texture", Transition_to_texture, 0);
 
   rb_define_method(rb_cTransition, "disposed?", Transition_is_disposed, 0);
 

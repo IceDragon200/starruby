@@ -6,7 +6,7 @@
   #define STARRUBY_MATRIX_PRV_H
 
   #include "matrix.h"
-  #include "dimnet.prv.h"
+  #include "dimnet.h"
 
   static int32_t MatrixI_entry_dims_to_index2(MatrixI *matrix, ArrayI *argv);
 

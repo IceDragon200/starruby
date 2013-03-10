@@ -7,7 +7,8 @@
   // Struct
   typedef struct
   {
-    int32_t x, y, width, height;
+    int32_t x, y;
+    uint16_t width, height;
   } Rect;
 
 #endif

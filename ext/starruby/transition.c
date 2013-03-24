@@ -1,7 +1,14 @@
+/*
+  StarRuby Transition
+    dc
+    dm 24/03/2013
+    vr 1.1.0
+  */
 #include "starruby.prv.h"
 #include "rect.h"
 #include "texture.h"
 #include "transition.h"
+#include "transition/crossfade.inc.c"
 
 #define COLOR_AVERAGE(color) (color.red + color.blue + color.green) / 3
 #define COLOR_P_AVERAGE(color) (color->red + color->blue + color->green) / 3
@@ -182,7 +189,10 @@ Transition_rect(VALUE self)
 static void
 Transition_free(Transition* transition)
 {
-  free(transition->data);
+  if(transition->data)
+    free(transition->data);
+  transition->data = NULL;
+
   free(transition);
 }
 
@@ -214,6 +224,21 @@ static VALUE Transition_initialize(VALUE self, VALUE rbWidth, VALUE rbHeight)
   transition->size = transition->width * transition->height;
   transition->data = ALLOC_N(uint8_t, transition->size);
   MEMZERO(transition->data, uint8_t, transition->size);
+
+  return Qnil;
+}
+
+static VALUE
+Transition_dispose(VALUE self)
+{
+  Transition *transition;
+  Data_Get_Struct(self, Transition, transition);
+  if(transition->data)
+    free(transition->data);
+  else
+    rb_raise(rb_eStarRubyError, "Cannot dispose already disposed Transition");
+
+  transition->data = NULL;
 
   return Qnil;
 }
@@ -264,12 +289,15 @@ strb_InitializeTransition(VALUE rb_mStarRuby)
   rb_cTransition = rb_define_class_under(
     rb_mStarRuby, "Transition", rb_cObject);
   rb_define_alloc_func(rb_cTransition, Transition_alloc);
+  rb_define_singleton_method(
+    rb_cTransition, "from_texture", TextureToTransition, 1);
+  rb_define_singleton_method(
+    rb_cTransition, "crossfade", Transition_crossfade, 4);
+
   rb_define_method(
     rb_cTransition, "initialize", Transition_initialize, 2);
   rb_define_method(
     rb_cTransition, "initialize_copy", Transition_init_copy, 1);
-  rb_define_singleton_method(
-    rb_cTransition, "from_texture", TextureToTransition, 1);
 
   rb_define_method(rb_cTransition, "width", Transition_width, 0);
   rb_define_method(rb_cTransition, "height", Transition_height, 0);
@@ -279,6 +307,7 @@ strb_InitializeTransition(VALUE rb_mStarRuby)
   rb_define_method(rb_cTransition, "invert!", Transition_invert_bang, 0);
   rb_define_method(rb_cTransition, "to_texture", Transition_to_texture, 0);
 
+  rb_define_method(rb_cTransition, "dispose", Transition_dispose, 0);
   rb_define_method(rb_cTransition, "disposed?", Transition_is_disposed, 0);
 
   rb_define_method(rb_cTransition, "rect", Transition_rect, 0);

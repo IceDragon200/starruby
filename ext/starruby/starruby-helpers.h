@@ -7,6 +7,8 @@
 
   #define MINMAXU255(x) MINMAX(x, 255, 0)
   #define MINMAX255(x) MINMAX(x, 255, -255)
+  #define CLAMPU255 MINMAXU255
+  #define CLAMP255 MINMAX255
   #define DIV255(x) ((x) / 255)
 
   #ifndef NUMERIC_P

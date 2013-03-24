@@ -5,18 +5,25 @@
 #ifndef STARRUBY_TEXTURE_H
   #define STARRUBY_TEXTURE_H
 
+  typedef void(*BlendFunc)(Pixel*, Pixel*, uint8_t);
+
+  struct ColorDiff {
+    int16_t red, green, blue, alpha;
+  } ;
+
   typedef enum {
     BLEND_TYPE_NONE,
     BLEND_TYPE_ALPHA,
     BLEND_TYPE_ADD,
     BLEND_TYPE_SUB,
-    BLEND_TYPE_MASK,
+    BLEND_TYPE_MUL,
+    BLEND_TYPE_MASK
   } BlendType;
 
   typedef enum {
     BLUR_TYPE_NONE,
     BLUR_TYPE_COLOR,
-    BLUR_TYPE_BACKGROUND,
+    BLUR_TYPE_BACKGROUND
   } BlurType;
 
   typedef struct {
@@ -50,6 +57,7 @@
     int srcX;
     int srcY;
     Tone tone;
+    Color color;
     BlendType blendType;
     uint8_t alpha;
   } RenderingTextureOptions;

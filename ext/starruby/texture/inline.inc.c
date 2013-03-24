@@ -40,3 +40,9 @@ ModifyRectInTexture(const Texture* texture,
   }
   return true;
 }
+
+inline static bool
+Texture_is_binded(Texture *texture)
+{
+  return texture->binded;
+}

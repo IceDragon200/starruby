@@ -4,7 +4,6 @@
   #include "texture.h"
 
   #define ALPHA(src, dst, a) DIV255((dst << 8) - dst + (src - dst) * a)
-  #define CLAMP255(v) (MAX(MIN((v), 255), 0))
 
   #define LOOP(process, length) \
     do {                        \
@@ -52,6 +51,7 @@
   static volatile VALUE symbol_camera_yaw     = Qundef;
   static volatile VALUE symbol_center_x       = Qundef;
   static volatile VALUE symbol_center_y       = Qundef;
+  static volatile VALUE symbol_color           = Qundef;
   static volatile VALUE symbol_height         = Qundef;
   static volatile VALUE symbol_intersection_x = Qundef;
   static volatile VALUE symbol_intersection_y = Qundef;
@@ -69,9 +69,7 @@
   static volatile VALUE symbol_src_x          = Qundef;
   static volatile VALUE symbol_src_y          = Qundef;
   static volatile VALUE symbol_sub            = Qundef;
-  static volatile VALUE symbol_tone_blue      = Qundef;
-  static volatile VALUE symbol_tone_green     = Qundef;
-  static volatile VALUE symbol_tone_red       = Qundef;
+  static volatile VALUE symbol_tone           = Qundef;
   static volatile VALUE symbol_view_angle     = Qundef;
   static volatile VALUE symbol_width          = Qundef;
   static volatile VALUE symbol_x              = Qundef;

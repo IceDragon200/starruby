@@ -213,7 +213,8 @@ Tone_to_s(VALUE self)
   Data_Get_Struct(self, Tone, tone);
   char str[256];
   snprintf(str, sizeof(str),
-           "#<StarRuby::Tone saturation=%d, red=%d, green=%d, blue=%d>",
+           "#<%s saturation=%d, red=%d, green=%d, blue=%d>",
+           rb_obj_classname(self),
            tone->saturation, tone->red, tone->green, tone->blue);
   return rb_str_new2(str);
 }

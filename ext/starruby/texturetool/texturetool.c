@@ -6,6 +6,8 @@
 // 3 - Strict
 #define VERBOSE_TEXTURE_TOOL 3
 
+VALUE rb_mTextureTool = Qnil;
+
 static VALUE
 TextureTool_render_texture_fast(VALUE klass,
   VALUE rbDstTexture, VALUE rbDstX, VALUE rbDstY,
@@ -147,7 +149,61 @@ static VALUE TextureTool_clipping_mask(
   return Qnil;
 }
 
-VALUE rb_mTextureTool = Qnil;
+/* 24/03/2013 TextureTool::noise */
+#define RAND2 (rand() % 2)
+#define COINFLIP (RAND2 == 0)
+#define RELAY(condition, nc, no) (condition ? no : nc)
+
+static VALUE TextureTool_noise(VALUE module, VALUE rbTexture, VALUE rbRect,
+                               VALUE rbR, VALUE rbBipolar, VALUE rbSubtract)
+{
+  strb_CheckRect(rbRect);
+  strb_CheckTexture(rbTexture);
+
+  Texture *texture;
+  Rect *rect;
+  Data_Get_Struct(rbTexture, Texture, texture);
+  Data_Get_Struct(rbRect, Rect, rect);
+
+  const bool bipolar = RTEST(rbBipolar);
+  const bool subtract = RTEST(rbSubtract);
+  const uint8_t delta = (uint8_t)(MIN(MAX(NUM2DBL(rbR), 0.0), 1.0) * 255);
+  int32_t dstX      = rect->x;
+  int32_t dstY      = rect->y;
+  int32_t dstWidth  = rect->width;
+  int32_t dstHeight = rect->height;
+
+  if(!ModifyRectInTexture(texture,
+                          &dstX, &dstY, &dstWidth, &dstHeight)) {
+    return Qnil;
+  }
+
+  int32_t padding = texture->width - dstWidth;
+
+  Pixel *pixels = &(texture->pixels[dstX + dstY * texture->width]);
+
+  srand(NUM2INT(rb_iv_get(rb_mTextureTool, "@noise_seed")));
+
+  for(int32_t y = 0; y < dstHeight; y++, pixels += padding) {
+    for(int32_t x = 0; x < dstWidth; x++, pixels++) {
+      int16_t redd   = rand() % MAX(1, DIV255(RELAY(subtract, pixels->color.red, 255 - pixels->color.red) * delta));
+      int16_t greend = rand() % MAX(1, DIV255(RELAY(subtract, pixels->color.green, 255 - pixels->color.green) * delta));
+      int16_t blued  = rand() % MAX(1, DIV255(RELAY(subtract, pixels->color.blue, 255 - pixels->color.blue) * delta));
+
+      if(bipolar) {
+        if(COINFLIP) redd   = -redd;
+        if(COINFLIP) greend = -greend;
+        if(COINFLIP) blued  = -blued;
+      }
+
+      pixels->color.red   = CLAMPU255(pixels->color.red + redd);
+      pixels->color.green = CLAMPU255(pixels->color.green + greend);
+      pixels->color.blue  = CLAMPU255(pixels->color.blue + blued);
+    }
+  }
+
+  return Qnil;
+}
 
 VALUE strb_InitializeTextureTool(VALUE rb_mStarRuby)
 {
@@ -159,6 +215,9 @@ VALUE strb_InitializeTextureTool(VALUE rb_mStarRuby)
                    TextureTool_color_blend, 2);
   rb_define_singleton_method(rb_mTextureTool, "clipping_mask",
                    TextureTool_clipping_mask, 8);
+  rb_define_singleton_method(rb_mTextureTool, "noise",
+                             TextureTool_noise, 5);
+  rb_iv_set(rb_mTextureTool, "@noise_seed", INT2NUM(0));
 
   return rb_mTextureTool;
 }

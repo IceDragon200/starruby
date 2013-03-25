@@ -216,7 +216,8 @@ Color_to_s(VALUE self)
   strb_GetColorFromRubyValue(&color, self);
   char str[256];
   snprintf(str, sizeof(str),
-           "#<StarRuby::Color alpha=%d, red=%d, green=%d, blue=%d>",
+           "#<%s alpha=%d, red=%d, green=%d, blue=%d>",
+           rb_obj_classname(self),
            color.alpha, color.red, color.green, color.blue);
   return rb_str_new2(str);
 }

@@ -3,8 +3,6 @@
 
   #include "texture.h"
 
-  #define ALPHA(src, dst, a) DIV255((dst << 8) - dst + (src - dst) * a)
-
   #define LOOP(process, length) \
     do {                        \
       int n = (length + 7) / 8; \

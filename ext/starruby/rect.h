@@ -1,14 +1,13 @@
 /*
   Slim RGX Rect Struct
  */
-#ifndef STARRUBY_VECTOR_H
-  #define STARRUBY_VECTOR_H
+#ifndef STARRUBY_RECT_H
+  #define STARRUBY_RECT_H
 
   // Struct
-  typedef struct
+  typedef struct strb_rect
   {
-    int32_t x, y;
-    uint16_t width, height;
+    int32_t x, y, width, height;
   } Rect;
 
 #endif

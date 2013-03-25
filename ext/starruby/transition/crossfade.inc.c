@@ -38,10 +38,12 @@ static VALUE Transition_crossfade(VALUE module,
 
   for(uint32_t y = 0; y < height; y++) {
     for(uint32_t x = 0; x < width; x++, dst++, pixels1++, pixels2++) {
-      dst->color.alpha = DIV255(DIV255(pixels1->color.alpha * pixels2->color.alpha) * delta);
-      dst->color.red = ALPHA(pixels1->color.red, pixels2->color.red, delta);
-      dst->color.green = ALPHA(pixels1->color.green, pixels2->color.green, delta);
-      dst->color.blue = ALPHA(pixels1->color.green, pixels2->color.blue, delta);
+      const uint8_t alpha = pixels1->color.alpha; //DIV255(pixels1->color.alpha * (255 - delta));
+      const uint8_t beta  = DIV255(pixels2->color.alpha * delta);
+      dst->color.alpha = MAX(alpha, beta);
+      dst->color.red   = ALPHA(pixels2->color.red,   pixels1->color.red,   beta);
+      dst->color.green = ALPHA(pixels2->color.green, pixels1->color.green, beta);
+      dst->color.blue  = ALPHA(pixels2->color.blue,  pixels1->color.blue,  beta);
     }
   }
   return Qnil;

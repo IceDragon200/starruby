@@ -181,8 +181,8 @@ Rect_to_s(VALUE self)
   Data_Get_Struct(self, Rect, rect);
   char str[256];
   snprintf(str, sizeof(str),
-           "#<StarRuby::Rect x=%d, y=%d, width=%d, height=%d>",
-           rect->x, rect->y, rect->width, rect->height);
+           "#<%s x=%d, y=%d, width=%d, height=%d>",
+           rb_obj_classname(self), rect->x, rect->y, rect->width, rect->height);
   return rb_str_new2(str);
 }
 

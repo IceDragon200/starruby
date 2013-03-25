@@ -11,6 +11,8 @@
   #define CLAMP255 MINMAX255
   #define DIV255(x) ((x) / 255)
 
+  #define ALPHA(src, dst, a) DIV255((dst << 8) - dst + (src - dst) * a)
+
   #ifndef NUMERIC_P
     #define NUMERIC_P(obj) (TYPE(obj) == T_FIXNUM ? true : (TYPE(obj) == T_FLOAT ? true : (TYPE(obj) == T_BIGNUM ? true : false)))
   #endif

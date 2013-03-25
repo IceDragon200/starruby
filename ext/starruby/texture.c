@@ -20,6 +20,7 @@
 #include "texture/render.inc.c"
 #include "texture/render-texture.inc.c"
 #include "texture/render-text.inc.c"
+#include "texture/gradient_fill_rect.inc.c"
 #include "texture/dump.inc.c"
 #include "texturetool/texturetool.c"
 
@@ -125,77 +126,6 @@ Texture_fill_rect(VALUE self, VALUE rbX, VALUE rbY,
       pixels->color = color;
     }
   }
-  return self;
-}
-
-#define TRANSITION_COLOR(col, base, diff, rt, rM)            \
-  Color col;                                                 \
-  col.red   = CLAMP255(base.red   + (diff.red   * rt / rM)); \
-  col.green = CLAMP255(base.green + (diff.green * rt / rM)); \
-  col.blue  = CLAMP255(base.blue  + (diff.blue  * rt / rM)); \
-  col.alpha = CLAMP255(base.alpha + (diff.alpha * rt / rM))
-
-static VALUE
-Texture_gradient_fill_rect(VALUE self,
-                  VALUE rbX, VALUE rbY,
-                  VALUE rbWidth, VALUE rbHeight,
-                  VALUE rbColor1, VALUE rbColor2, VALUE rbVertical)
-{
-  rb_check_frozen(self);
-  const Texture* texture;
-  Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
-
-  Pixel* pixels = texture->pixels;
-
-  int rx = NUM2INT(rbX);
-  int ry = NUM2INT(rbY);
-  int rwidth = NUM2INT(rbWidth);
-  int rheight = NUM2INT(rbHeight);
-  int rx2 = rx + rwidth;
-  int ry2 = ry + rheight;
-
-  if (!ModifyRectInTexture(texture, &rx, &ry, &rwidth, &rheight)) {
-    return self;
-  }
-
-  Color color1, color2;
-  strb_GetColorFromRubyValue(&color1, rbColor1);
-  strb_GetColorFromRubyValue(&color2, rbColor2);
-
-  struct ColorDiff base;
-  base.red   = color1.red;
-  base.green = color1.green;
-  base.blue  = color1.blue;
-  base.alpha = color1.alpha;
-
-  struct ColorDiff diff;
-  diff.red   = color2.red   - base.red;
-  diff.green = color2.green - base.green;
-  diff.blue  = color2.blue  - base.blue;
-  diff.alpha = color2.alpha - base.alpha;
-
-  signed int r = 0;
-  if(rbVertical == Qtrue) {
-    for(int y = ry; y < ry2; y++, r++) {
-      TRANSITION_COLOR(color, base, diff, r, rheight);
-
-      for(int x = rx; x < rx2; x++) {
-        pixels[x + (y * texture->width)].color = color;
-      }
-    }
-  }
-  else
-  {
-    for(int x = rx; x < rx2; x++, r++) {
-      TRANSITION_COLOR(color, base, diff, r, rwidth);
-
-      for(int y = ry; y < ry2; y++) {
-        pixels[x + (y * texture->width)].color = color;
-      }
-    }
-  }
-
   return self;
 }
 

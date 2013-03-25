@@ -1,8 +1,12 @@
 require 'rubygems'
 require 'mkmf'
-require 'mkrf'
+require '/home/icy/Dropbox/code/Git/ruby-mkrf/lib/mkrf.rb'
+#load '/home/icy/Dropbox/code/Git/ruby-mkrf/lib/mkrf/generator.rb'
 
 Mkrf::Generator.new( 'starruby', ["*.c", "*.cpp"] ) do |g|
+  g.cc   = 'clang'
+  g.cppc = 'gcc'
+
   g.cflags << ' -std=c99'
   g.cflags << ' -I/usr/include/cairo/'
 

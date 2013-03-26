@@ -26,7 +26,7 @@ static inline void ClipColor(Pixel *pixel)
   }
 }
 
-static inline void SetLum(Pixel *pixel, uint8_t l)
+static inline void SetLum(Pixel *pixel, const uint8_t l)
 {
   uint8_t d = l - Lum(pixel);
   pixel->color.red   = CLAMPU255(pixel->color.red + d);
@@ -35,17 +35,17 @@ static inline void SetLum(Pixel *pixel, uint8_t l)
   //ClipColor(pixel);
 }
 
-static void Pixel_blend_none(Pixel *dst, Pixel *src, uint8_t alpha)
+static void Pixel_blend_none(Pixel *dst, Pixel *src, const uint8_t alpha)
 {
   *dst = *src;
 }
 
-static void Pixel_blend_mask(Pixel *dst, Pixel *src, uint8_t alpha)
+static void Pixel_blend_mask(Pixel *dst, Pixel *src, const uint8_t alpha)
 {
   dst->color.alpha = src->color.alpha;
 }
 
-static void Pixel_blend_alpha(Pixel *dst, Pixel *src, uint8_t alpha)
+static void Pixel_blend_alpha(Pixel *dst, Pixel *src, const uint8_t alpha)
 {
   const uint8_t dstAlpha = dst->color.alpha;
   const uint8_t beta = DIV255(src->color.alpha * alpha);
@@ -64,13 +64,13 @@ static void Pixel_blend_alpha(Pixel *dst, Pixel *src, uint8_t alpha)
   }
 }
 
-static void Pixel_blend_color(Pixel *dst, Pixel *src, uint8_t alpha)
+static void Pixel_blend_color(Pixel *dst, Pixel *src, const uint8_t alpha)
 {
   if(dst->color.alpha == 0 || src->color.alpha == 0) return;
   SetLum(src, Lum(dst));
 }
 
-static void Pixel_blend_add(Pixel *dst, Pixel *src, uint8_t alpha)
+static void Pixel_blend_add(Pixel *dst, Pixel *src, const uint8_t alpha)
 {
   const uint8_t beta = DIV255(src->color.alpha * alpha);
   const int addR = src->color.red   + DIV255(dst->color.red * alpha);
@@ -82,7 +82,7 @@ static void Pixel_blend_add(Pixel *dst, Pixel *src, uint8_t alpha)
   dst->color.alpha = beta;
 }
 
-static void Pixel_blend_sub(Pixel *dst, Pixel *src, uint8_t alpha)
+static void Pixel_blend_sub(Pixel *dst, Pixel *src, const uint8_t alpha)
 {
   const uint8_t beta = DIV255(src->color.alpha * alpha);
   const int subR = -src->color.red   + DIV255(dst->color.red * alpha);
@@ -94,7 +94,7 @@ static void Pixel_blend_sub(Pixel *dst, Pixel *src, uint8_t alpha)
   dst->color.alpha = beta;
 }
 
-static void Pixel_blend_mul(Pixel *dst, Pixel *src, uint8_t alpha)
+static void Pixel_blend_mul(Pixel *dst, Pixel *src, const uint8_t alpha)
 {
   const uint8_t beta = DIV255(src->color.alpha * alpha);
   const int addR = DIV255(src->color.red   * DIV255(dst->color.red * alpha));
@@ -106,38 +106,47 @@ static void Pixel_blend_mul(Pixel *dst, Pixel *src, uint8_t alpha)
   dst->color.alpha = beta;
 }
 
-static inline void Pixel_tone(Pixel *dst, const Tone *tone, uint8_t alpha)
-{
-  uint8_t beta = alpha;//DIV255(alpha * dst->color.alpha);
-  if (tone->saturation < 255) {
-    // http://www.poynton.com/ColorFAQ.html
-    const uint8_t y = Lum(dst);
-    dst->color.red   = ALPHA(dst->color.red,   y, tone->saturation);
-    dst->color.green = ALPHA(dst->color.green, y, tone->saturation);
-    dst->color.blue  = ALPHA(dst->color.blue,  y, tone->saturation);
-  }
-  if(tone->red != 0) {
-    if (0 < tone->red) {
-      dst->color.red = ALPHA(255, dst->color.red, DIV255(tone->red * beta));
-    } else {
-      dst->color.red = ALPHA(0,   dst->color.red, -DIV255(tone->red * beta));
-    }
-  }
-  if(tone->green != 0) {
-    if (0 < tone->green) {
-      dst->color.green = ALPHA(255, dst->color.green, DIV255(tone->green * beta));
-    } else {
-      dst->color.green = ALPHA(0,   dst->color.green, -DIV255(tone->green * beta));
-    }
-  }
-  if(tone->blue != 0) {
-    if (0 < tone->blue) {
-      dst->color.blue = ALPHA(255, dst->color.blue, DIV255(tone->blue * beta));
-    } else {
-      dst->color.blue = ALPHA(0,   dst->color.blue, -DIV255(tone->blue * beta));
-    }
-  }
+// http://www.poynton.com/ColorFAQ.html
+// static inline void Pixel_tone(Pixel *dst, Tone *tone, uint8_t beta)
+#define Pixel_tone(dst, tone, beta) \
+{ \
+  if (tone->saturation < 255) { \
+    const uint8_t y = Lum(dst); \
+    dst->color.red   = ALPHA(dst->color.red,   y, tone->saturation); \
+    dst->color.green = ALPHA(dst->color.green, y, tone->saturation); \
+    dst->color.blue  = ALPHA(dst->color.blue,  y, tone->saturation); \
+  } \
+  if(tone->red != 0) { \
+    if (0 < tone->red) { \
+      dst->color.red = ALPHA(255, dst->color.red, DIV255(tone->red * beta)); \
+    } else { \
+      dst->color.red = ALPHA(0,   dst->color.red, -DIV255(tone->red * beta)); \
+    } \
+  } \
+  if(tone->green != 0) { \
+    if (0 < tone->green) { \
+      dst->color.green = ALPHA(255, dst->color.green, DIV255(tone->green * beta));\
+    } else { \
+      dst->color.green = ALPHA(0,   dst->color.green, -DIV255(tone->green * beta)); \
+    } \
+  } \
+  if(tone->blue != 0) { \
+    if (0 < tone->blue) { \
+      dst->color.blue = ALPHA(255, dst->color.blue, DIV255(tone->blue * beta)); \
+    } else { \
+      dst->color.blue = ALPHA(0,   dst->color.blue, -DIV255(tone->blue * beta)); \
+    } \
+  } \
 }
+
+#define is_valid_tone(tone_p) (tone_p && (tone_p->saturation < 255 || tone_p->red != 0 || tone_p->green != 0 || tone_p->blue != 0))
+#define is_valid_color(color_p) (color_p && (color_p->alpha != 0))
+#define IMGLOOP(content) \
+  for(int j = 0; j < height; j++, src += srcPadding, dst += dstPadding) { \
+    for(int k = 0; k < width; k++, src++, dst++) { \
+      content; \
+    } \
+  }
 
 static void
 RenderTexture_blend(const Texture* srcTexture, const Texture* dstTexture,
@@ -170,6 +179,7 @@ RenderTexture_blend(const Texture* srcTexture, const Texture* dstTexture,
   } else if (dstTextureHeight <= dstY) {
     return;
   }
+
   const int width  = MIN(srcWidth,  dstTextureWidth - dstX);
   const int height = MIN(srcHeight, dstTextureHeight - dstY);
   Pixel* src = &(srcTexture->pixels[srcX + srcY * srcTextureWidth]);
@@ -177,27 +187,23 @@ RenderTexture_blend(const Texture* srcTexture, const Texture* dstTexture,
   const int srcPadding = srcTextureWidth - width;
   const int dstPadding = dstTextureWidth - width;
 
-  #define IMGLOOP(content) \
-    for(int j = 0; j < height; j++, src += srcPadding, dst += dstPadding) { \
-      for(int k = 0; k < width; k++, src++, dst++) { \
-        content; \
-      } \
-    }
+  const bool use_tone  = is_valid_tone(tone);
+  const bool use_color = is_valid_color(color);
 
-  if(tone && color) {
+  if(use_tone && use_color) {
     IMGLOOP({
       Pixel pixel = *src;
-      Pixel_tone(&pixel, tone, alpha);
+      Pixel_tone((&pixel), tone, alpha);
       (*blendFunc)(dst, &pixel, alpha);
       Pixel_blend_color(dst, (Pixel*)color, 255);
     })
-  } else if(tone) {
+  } else if(use_tone) {
     IMGLOOP({
       Pixel pixel = *src;
-      Pixel_tone(&pixel, tone, alpha);
+      Pixel_tone((&pixel), tone, alpha);
       (*blendFunc)(dst, &pixel, alpha);
     })
-  } else if(color) {
+  } else if(use_color) {
     IMGLOOP({
       (*blendFunc)(dst, src, alpha);
       Pixel_blend_color(dst, (Pixel*)color, 255);

@@ -20,14 +20,16 @@ TextureTool_render_texture_fast(VALUE klass,
 
   rb_check_frozen(rbDstTexture);
 
-  const Texture* dstTexture;
-  const Texture* srcTexture;
+  const Texture *dstTexture;
+  Data_Get_Struct(rbDstTexture, Texture, dstTexture);
+  strb_CheckDisposedTexture(dstTexture);
+
+  const Texture *srcTexture;
+  Data_Get_Struct(rbSrcTexture, Texture, srcTexture);
+  strb_CheckDisposedTexture(srcTexture);
+
   const Tone *tone = NULL;
   const Color *color = NULL;
-  Data_Get_Struct(rbDstTexture, Texture, dstTexture);
-  Data_Get_Struct(rbSrcTexture, Texture, srcTexture);
-  strb_CheckDisposedTexture(dstTexture);
-  strb_CheckDisposedTexture(srcTexture);
 
   if(!NIL_P(rbTone))
     Data_Get_Struct(rbTone, Tone, tone);
@@ -38,16 +40,16 @@ TextureTool_render_texture_fast(VALUE klass,
   int dstX = NUM2INT(rbDstX);
   int dstY = NUM2INT(rbDstY);
 
-  int srcX = NUM2INT(rbSrcX);
-  int srcY = NUM2INT(rbSrcY);
-  int srcWidth = NUM2INT(rbSrcWidth);
+  int srcX      = NUM2INT(rbSrcX);
+  int srcY      = NUM2INT(rbSrcY);
+  int srcWidth  = NUM2INT(rbSrcWidth);
   int srcHeight = NUM2INT(rbSrcHeight);
 
   const uint8_t alpha = CLAMPU255(NUM2INT(rbAlpha));
   const int blendType = NUM2INT(rbBlendType);
 
   if (!ModifyRectInTexture(srcTexture,
-                           &(srcX), &(srcY), &(srcWidth), &(srcHeight))) {
+                           &srcX, &srcY, &srcWidth, &srcHeight)) {
     return Qnil;
   }
 

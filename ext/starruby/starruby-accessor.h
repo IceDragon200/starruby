@@ -13,6 +13,7 @@
     }                                                                 \
     static VALUE namespace ## _set_ ## attr(VALUE self, VALUE arg1)   \
     {                                                                 \
+      rb_check_frozen(self);                                          \
       strct *obj1;                                                    \
       Data_Get_Struct(self, strct, obj1);                             \
       obj1->attr = to_c(arg1);                                        \
@@ -23,16 +24,6 @@
     static void namespace ## _free(strct *arg1)  \
     {                                            \
       free(arg1);                                \
-    }
-
-  #define STRUCT_CHECK_TYPE_FUNC(namespace, strct)                                    \
-    void strb_Check ## namespace(VALUE rbObj)                                         \
-    {                                                                                 \
-      Check_Type(rbObj, T_DATA);                                                      \
-      if (RDATA(rbObj)->dfree != (RUBY_DATA_FUNC)namespace ## _free) {                \
-        rb_raise(rb_eTypeError, "wrong argument type %s, expected StarRuby::" #strct, \
-                 rb_obj_classname(rbObj));                                            \
-      }                                                                               \
     }
 
 #endif

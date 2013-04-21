@@ -5,7 +5,7 @@ strb_Texture_is_disposed(const Texture* const texture)
 }
 
 inline void
-strb_CheckDisposedTexture(const Texture* const texture)
+strb_TextureCheckDisposed(const Texture* const texture)
 {
   if (!texture->pixels) {
     rb_raise(rb_eRuntimeError,

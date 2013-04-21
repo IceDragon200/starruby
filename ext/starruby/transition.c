@@ -10,13 +10,10 @@
 #include "transition.h"
 #include "transition/crossfade.inc.c"
 
+volatile VALUE rb_cTransition = Qundef;
+
 #define COLOR_AVERAGE(color) (color.red + color.blue + color.green) / 3
 #define COLOR_P_AVERAGE(color) (color->red + color->blue + color->green) / 3
-
-static VALUE rb_cTransition = Qundef;
-
-static void Transition_free(Transition*);
-STRUCT_CHECK_TYPE_FUNC(Transition, Transition);
 
 void strb_CheckDisposedTransition(const Transition *transition)
 {
@@ -29,6 +26,7 @@ void strb_CheckDisposedTransition(const Transition *transition)
 static VALUE
 Transition_set(VALUE self, VALUE rbX, VALUE rbY, VALUE rbValue)
 {
+  rb_check_frozen(self);
   Transition *src_transition;
   Data_Get_Struct(self, Transition, src_transition);
   strb_CheckDisposedTransition(src_transition);
@@ -66,9 +64,9 @@ TextureToTransition(VALUE klass, VALUE rbTexture)
   Texture *texture;
   Transition *transition;
   VALUE rbTransition;
-  strb_CheckTexture(rbTexture);
+  strb_CheckObjIsKindOf(rbTexture, rb_cTexture);
   Data_Get_Struct(rbTexture, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   rbTransition = rb_class_new_instance(2, (VALUE[]){
                                        INT2FIX(texture->width),
@@ -82,7 +80,7 @@ TextureToTransition(VALUE klass, VALUE rbTexture)
   Color32 *pixel = (Color32*)texture->pixels;
   for(uint32_t i = 0; i < length; i++, data++, pixel++)
   {
-    *data = MIN(MAX((pixel->red + pixel->green + pixel->blue) / 3, 0), 255);
+    *data = DIV255(MIN(MAX((pixel->red + pixel->green + pixel->blue) / 3, 0), 255) * pixel->alpha);
   }
   return rbTransition;
 }
@@ -91,9 +89,9 @@ static VALUE
 Transition_transition(self, rbTTexture, rbT1, rbT2, rbt)
   VALUE self, rbTTexture, rbT1, rbT2, rbt;
 {
-  strb_CheckTexture(rbTTexture);
-  strb_CheckTexture(rbT1);
-  strb_CheckTexture(rbT2);
+  strb_CheckObjIsKindOf(rbTTexture, rb_cTexture);
+  strb_CheckObjIsKindOf(rbT1, rb_cTexture);
+  strb_CheckObjIsKindOf(rbT2, rb_cTexture);
 
   Texture *texture, *src_texture, *trg_texture;
   Transition *transition;
@@ -103,9 +101,9 @@ Transition_transition(self, rbTTexture, rbT1, rbT2, rbt)
   Data_Get_Struct(rbT2, Texture, trg_texture);
   Data_Get_Struct(self, Transition, transition);
 
-  strb_CheckDisposedTexture(texture);
-  strb_CheckDisposedTexture(src_texture);
-  strb_CheckDisposedTexture(trg_texture);
+  strb_TextureCheckDisposed(texture);
+  strb_TextureCheckDisposed(src_texture);
+  strb_TextureCheckDisposed(trg_texture);
   strb_CheckDisposedTransition(transition);
 
   if(!strb_Texture_dimensions_match(texture, src_texture) ||
@@ -183,7 +181,7 @@ Transition_rect(VALUE self)
   Data_Get_Struct(self, Transition, transition);
   VALUE rbArgv[4] = { INT2NUM(0), INT2NUM(0),
                       INT2NUM(transition->width), INT2NUM(transition->height) };
-  return rb_class_new_instance(4, rbArgv, strb_GetRectClass());
+  return rb_class_new_instance(4, rbArgv, rb_cRect);
 }
 
 static void
@@ -246,6 +244,7 @@ Transition_dispose(VALUE self)
 static VALUE
 Transition_invert_bang(VALUE self)
 {
+  rb_check_frozen(self);
   Transition *transition;
   Data_Get_Struct(self, Transition, transition);
   strb_CheckDisposedTransition(transition);
@@ -264,9 +263,9 @@ Transition_to_texture(VALUE self)
   strb_CheckDisposedTransition(transition);
 
   VALUE rbTexture = rb_class_new_instance(2, (VALUE[]){
-                            INT2FIX(transition->width),
-                            INT2FIX(transition->height)},
-                            strb_GetTextureClass());
+                                          INT2FIX(transition->width),
+                                          INT2FIX(transition->height)},
+                                          rb_cTexture);
 
   Texture *texture;
   Data_Get_Struct(rbTexture, Texture, texture);
@@ -286,19 +285,16 @@ Transition_to_texture(VALUE self)
 VALUE
 strb_InitializeTransition(VALUE rb_mStarRuby)
 {
-  rb_cTransition = rb_define_class_under(
-    rb_mStarRuby, "Transition", rb_cObject);
+  rb_cTransition = rb_define_class_under(rb_mStarRuby,
+                                         "Transition", rb_cObject);
   rb_define_alloc_func(rb_cTransition, Transition_alloc);
-  rb_define_singleton_method(
-    rb_cTransition, "from_texture", TextureToTransition, 1);
-  rb_define_singleton_method(
-    rb_cTransition, "crossfade", Transition_crossfade, 4);
+  rb_define_singleton_method(rb_cTransition, "from_texture",
+                             TextureToTransition, 1);
+  rb_define_singleton_method(rb_cTransition, "crossfade",
+                             Transition_crossfade, 4);
 
-  rb_define_method(
-    rb_cTransition, "initialize", Transition_initialize, 2);
-  rb_define_method(
-    rb_cTransition, "initialize_copy", Transition_init_copy, 1);
-
+  rb_define_method(rb_cTransition, "initialize", Transition_initialize, 2);
+  rb_define_method(rb_cTransition, "initialize_copy", Transition_init_copy, 1);
   rb_define_method(rb_cTransition, "width", Transition_width, 0);
   rb_define_method(rb_cTransition, "height", Transition_height, 0);
   rb_define_method(rb_cTransition, "[]", Transition_get, 2);
@@ -306,10 +302,8 @@ strb_InitializeTransition(VALUE rb_mStarRuby)
   rb_define_method(rb_cTransition, "transition", Transition_transition, 4);
   rb_define_method(rb_cTransition, "invert!", Transition_invert_bang, 0);
   rb_define_method(rb_cTransition, "to_texture", Transition_to_texture, 0);
-
   rb_define_method(rb_cTransition, "dispose", Transition_dispose, 0);
   rb_define_method(rb_cTransition, "disposed?", Transition_is_disposed, 0);
-
   rb_define_method(rb_cTransition, "rect", Transition_rect, 0);
 
   return rb_cTransition;

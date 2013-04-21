@@ -15,18 +15,18 @@ TextureTool_render_texture_fast(VALUE klass,
   VALUE rbSrcX, VALUE rbSrcY, VALUE rbSrcWidth, VALUE rbSrcHeight,
   VALUE rbAlpha, VALUE rbTone, VALUE rbColor, VALUE rbBlendType)
 {
-  strb_CheckTexture(rbDstTexture);
-  strb_CheckTexture(rbSrcTexture);
+  strb_CheckObjIsKindOf(rbDstTexture, rb_cTexture);
+  strb_CheckObjIsKindOf(rbSrcTexture, rb_cTexture);
 
   rb_check_frozen(rbDstTexture);
 
   const Texture *dstTexture;
   Data_Get_Struct(rbDstTexture, Texture, dstTexture);
-  strb_CheckDisposedTexture(dstTexture);
+  strb_TextureCheckDisposed(dstTexture);
 
   const Texture *srcTexture;
   Data_Get_Struct(rbSrcTexture, Texture, srcTexture);
-  strb_CheckDisposedTexture(srcTexture);
+  strb_TextureCheckDisposed(srcTexture);
 
   const Tone *tone = NULL;
   const Color *color = NULL;
@@ -53,9 +53,9 @@ TextureTool_render_texture_fast(VALUE klass,
     return Qnil;
   }
 
-  RenderTexture(srcTexture, dstTexture,
-                srcX, srcY, srcWidth, srcHeight, dstX, dstY,
-                alpha, tone, color, blendType);
+  strb_TextureRender(srcTexture, dstTexture,
+                    srcX, srcY, srcWidth, srcHeight, dstX, dstY,
+                    alpha, tone, color, blendType);
 
   return Qnil;
 }
@@ -63,14 +63,14 @@ TextureTool_render_texture_fast(VALUE klass,
 static VALUE TextureTool_color_blend(
   VALUE klass, VALUE rbTexture, VALUE rbColor)
 {
-  strb_CheckTexture(rbTexture);
+  strb_CheckObjIsKindOf(rbTexture, rb_cTexture);
   rb_check_frozen(rbTexture);
 
   const Texture* texture;
   Color color;
 
   Data_Get_Struct(rbTexture, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   strb_GetColorFromRubyValue(&color, rbColor);
 
@@ -102,8 +102,8 @@ static VALUE TextureTool_clipping_mask(
   VALUE rbSrcTexture,
   VALUE rbSrcX, VALUE rbSrcY, VALUE rbSrcWidth, VALUE rbSrcHeight)
 {
-  strb_CheckTexture(rbDstTexture);
-  strb_CheckTexture(rbSrcTexture);
+  strb_CheckObjIsKindOf(rbDstTexture, rb_cTexture);
+  strb_CheckObjIsKindOf(rbSrcTexture, rb_cTexture);
 
   rb_check_frozen(rbDstTexture);
 
@@ -111,8 +111,8 @@ static VALUE TextureTool_clipping_mask(
   const Texture* srcTexture;
   Data_Get_Struct(rbDstTexture, Texture, dstTexture);
   Data_Get_Struct(rbSrcTexture, Texture, srcTexture);
-  strb_CheckDisposedTexture(dstTexture);
-  strb_CheckDisposedTexture(srcTexture);
+  strb_TextureCheckDisposed(dstTexture);
+  strb_TextureCheckDisposed(srcTexture);
 
   Pixel* src_pixels = srcTexture->pixels;
   Pixel* dst_pixels = dstTexture->pixels;
@@ -159,8 +159,8 @@ static VALUE TextureTool_clipping_mask(
 static VALUE TextureTool_noise(VALUE module, VALUE rbTexture, VALUE rbRect,
                                VALUE rbR, VALUE rbBipolar, VALUE rbSubtract)
 {
-  strb_CheckRect(rbRect);
-  strb_CheckTexture(rbTexture);
+  strb_CheckObjIsKindOf(rbRect, rb_cRect);
+  strb_CheckObjIsKindOf(rbTexture, rb_cTexture);
 
   Texture *texture;
   Rect *rect;

@@ -3,7 +3,7 @@ Texture_dump(VALUE self, VALUE rbFormat)
 {
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
   const char* format = StringValuePtr(rbFormat);
   const int formatLength = RSTRING_LEN(rbFormat);
   const int pixelLength = texture->width * texture->height;
@@ -29,7 +29,7 @@ Texture_undump(VALUE self, VALUE rbData, VALUE rbFormat)
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   const char* format = StringValuePtr(rbFormat);
   const int formatLength = RSTRING_LEN(rbFormat);

@@ -52,7 +52,7 @@ Texture_change_hue_bang(VALUE self, VALUE rbAngle)
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
   const double angle = NUM2DBL(rbAngle);
   if (angle == 0) {
     return Qnil;
@@ -72,7 +72,7 @@ Texture_change_hue(VALUE self, VALUE rbAngle)
   //Texture* newTexture;
 
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
   volatile VALUE rbTexture = rb_obj_dup(self);
   //Data_Get_Struct(rbTexture, Texture, newTexture);
   Texture_change_hue_bang(rbTexture, rbAngle);

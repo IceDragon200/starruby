@@ -7,7 +7,7 @@ Texture_gradient_fill_rect(VALUE self,
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   int32_t dstX      = NUM2INT(rbX);
   int32_t dstY      = NUM2INT(rbY);

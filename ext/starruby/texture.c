@@ -1,8 +1,8 @@
 /*
   StarRuby Texture
  */
-#include <assert.h>
 #include <png.h>
+
 #include "vector.h"
 #include "rect.h"
 #include "starruby.prv.h"
@@ -10,9 +10,12 @@
 
 #include "texture/inline.inc.c"
 #include "texture/alloc.inc.c"
-#include "texture/png-file.inc.c"
 #include "texture/cairo-bind.inc.c"
 #include "texture/blur.inc.c"
+#include "texture/rotate.inc.c"
+#include "texture/crop.inc.c"
+#include "texture/recolor.inc.c"
+#include "texture/mask.inc.c"
 #include "texture/hue.inc.c"
 #include "texture/pixel.inc.c"
 #include "texture/pixel-blend.inc.c"
@@ -22,34 +25,35 @@
 #include "texture/render-text.inc.c"
 #include "texture/gradient_fill_rect.inc.c"
 #include "texture/dump.inc.c"
+#include "texture/texure-from-cairo.inc.c"
+#include "texture/load-png.inc.c"
+#ifdef STRB_CAN_LOAD_SVG
+  #include "texture/load-svg.inc.c"
+#endif
+//#include "texture/load-jpg.inc.c"
+//#include "texture/load-bmp.inc.c"
+#include "texture/texture-save.inc.c"
 #include "texturetool/texturetool.c"
 
-STRUCT_CHECK_TYPE_FUNC(Texture, Texture);
+volatile VALUE rb_cTexture = Qundef;
 
-VALUE strb_GetTextureClass(void)
-{
-  return rb_cTexture;
-}
-
-static VALUE
-Texture_initialize(VALUE self, VALUE rbWidth, VALUE rbHeight)
+static VALUE Texture_initialize(VALUE self, VALUE rbWidth, VALUE rbHeight)
 {
   Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  const int32_t width  = NUM2INT(rbWidth);
-  const int32_t height = NUM2INT(rbHeight);
+  const Integer width  = NUM2INT(rbWidth);
+  const Integer height = NUM2INT(rbHeight);
 
-  if (width <= 0)
+  if (width <= 0) {
     rb_raise(rb_eArgError, "width must be greater than 0");
-  if (height <= 0)
+  }
+  if (height <= 0) {
     rb_raise(rb_eArgError, "height must be greater than 0");
+  }
 
   texture->width  = width;
   texture->height = height;
-
-  const uint64_t length = texture->width * texture->height;
-  texture->pixels = ALLOC_N(Pixel, length);
-  MEMZERO(texture->pixels, Pixel, length);
+  strb_TextureAllocData(texture);
 
   return Qnil;
 }
@@ -77,9 +81,9 @@ Texture_clear(VALUE self)
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
-  MEMZERO(texture->pixels, Color, texture->width * texture->height);
+  MEMZERO(texture->pixels, Pixel, texture->width * texture->height);
   return self;
 }
 
@@ -89,11 +93,11 @@ Texture_fill(VALUE self, VALUE rbColor)
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   Color color;
   strb_GetColorFromRubyValue(&color, rbColor);
-  const int length = texture->width * texture->height;
+  const Bignum length = texture->width * texture->height;
   Pixel* pixels = texture->pixels;
   for (int i = 0; i < length; i++, pixels++) {
     pixels->color = color;
@@ -108,7 +112,7 @@ Texture_fill_rect(VALUE self, VALUE rbX, VALUE rbY,
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   int rectX = NUM2INT(rbX);
   int rectY = NUM2INT(rbY);
@@ -134,7 +138,7 @@ Texture_transform_in_perspective(int argc, VALUE* argv, VALUE self)
 {
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
   volatile VALUE rbX, rbY, rbHeight, rbOptions;
   rb_scan_args(argc, argv, "31", &rbX, &rbY, &rbHeight, &rbOptions);
   if (NIL_P(rbOptions)) {
@@ -189,11 +193,21 @@ Texture_transform_in_perspective(int argc, VALUE* argv, VALUE self)
   return rbResult;
 }
 
-VALUE
-strb_InitializeTexture(VALUE rb_mStarRuby)
+VALUE strb_InitializeTexture(VALUE rb_mStarRuby)
 {
   rb_cTexture = rb_define_class_under(rb_mStarRuby, "Texture", rb_cObject);
-  rb_define_singleton_method(rb_cTexture, "load", Texture_s_load, -1);
+#ifdef STARRUBY_TEXTURE_LOAD_PNG
+  rb_define_singleton_method(rb_cTexture, "load", Texture_s_load, 1);
+#endif
+#ifdef STARRUBY_TEXTURE_LOAD_BMP
+  rb_define_singleton_method(rb_cTexture, "load_bmp", Texture_s_load_bmp, 1);
+#endif
+#ifdef STARRUBY_TEXTURE_LOAD_JPG
+  rb_define_singleton_method(rb_cTexture, "load_jpg", Texture_s_load_jpg, 1);
+#endif
+#ifdef STARRUBY_TEXTURE_LOAD_SVG
+  rb_define_singleton_method(rb_cTexture, "load_svg", Texture_s_load_svg, 3);
+#endif
   rb_define_singleton_method(rb_cTexture, "bind_from_cairo",
                              Texture_s_bind_from_cairo, 1);
   rb_define_alloc_func(rb_cTexture, Texture_alloc);
@@ -254,49 +268,30 @@ strb_InitializeTexture(VALUE rb_mStarRuby)
   rb_define_method(rb_cTexture, "rect",
                    Texture_rect, 0);
 
+  rb_define_method(rb_cTexture, "rotate",
+                   Texture_rotate, 1);
+
+  rb_define_method(rb_cTexture, "crop",
+                   Texture_crop, -1);
+  rb_define_method(rb_cTexture, "recolor",
+                   Texture_recolor, 3);
+  rb_define_method(rb_cTexture, "mask",
+                   Texture_mask, 6);
   rb_define_method(rb_cTexture, "bind_to_cairo", Texture_bind_cairo, 1);
   rb_define_method(rb_cTexture, "unbind", Texture_unbind, 0);
 
-  symbol_add            = ID2SYM(rb_intern("add"));
-  symbol_alpha          = ID2SYM(rb_intern("alpha"));
-  symbol_angle          = ID2SYM(rb_intern("angle"));
-  symbol_background     = ID2SYM(rb_intern("background"));
-  symbol_blend_type     = ID2SYM(rb_intern("blend_type"));
-  symbol_blur           = ID2SYM(rb_intern("blur"));
-  symbol_camera_height  = ID2SYM(rb_intern("camera_height"));
-  symbol_camera_pitch   = ID2SYM(rb_intern("camera_pitch"));
-  symbol_camera_roll    = ID2SYM(rb_intern("camera_roll"));
-  symbol_camera_x       = ID2SYM(rb_intern("camera_x"));
-  symbol_camera_y       = ID2SYM(rb_intern("camera_y"));
-  symbol_camera_yaw     = ID2SYM(rb_intern("camera_yaw"));
-  symbol_center_x       = ID2SYM(rb_intern("center_x"));
-  symbol_center_y       = ID2SYM(rb_intern("center_y"));
-  symbol_color          = ID2SYM(rb_intern("color"));
-  symbol_height         = ID2SYM(rb_intern("height"));
-  symbol_intersection_x = ID2SYM(rb_intern("intersection_x"));
-  symbol_intersection_y = ID2SYM(rb_intern("intersection_y"));
-  symbol_io_length      = ID2SYM(rb_intern("io_length"));
-  symbol_loop           = ID2SYM(rb_intern("loop"));
-  symbol_mask           = ID2SYM(rb_intern("mask"));
-  symbol_matrix         = ID2SYM(rb_intern("matrix"));
-  symbol_none           = ID2SYM(rb_intern("none"));
-  symbol_palette        = ID2SYM(rb_intern("palette"));
-  symbol_saturation     = ID2SYM(rb_intern("saturation"));
-  symbol_scale_x        = ID2SYM(rb_intern("scale_x"));
-  symbol_scale_y        = ID2SYM(rb_intern("scale_y"));
-  symbol_src_height     = ID2SYM(rb_intern("src_height"));
-  symbol_src_width      = ID2SYM(rb_intern("src_width"));
-  symbol_src_x          = ID2SYM(rb_intern("src_x"));
-  symbol_src_y          = ID2SYM(rb_intern("src_y"));
-  symbol_sub            = ID2SYM(rb_intern("sub"));
-  symbol_tone           = ID2SYM(rb_intern("tone"));
-  symbol_view_angle     = ID2SYM(rb_intern("view_angle"));
-  symbol_width          = ID2SYM(rb_intern("width"));
-  symbol_x              = ID2SYM(rb_intern("x"));
-  symbol_y              = ID2SYM(rb_intern("y"));
+  rb_define_const(rb_cTexture, "ROTATE_NONE", INT2FIX(ROTATE_NONE));
+  rb_define_const(rb_cTexture, "ROTATE_CW",   INT2FIX(ROTATE_CW));
+  rb_define_const(rb_cTexture, "ROTATE_CCW",  INT2FIX(ROTATE_CCW));
+  rb_define_const(rb_cTexture, "ROTATE_180",  INT2FIX(ROTATE_180));
+  rb_define_const(rb_cTexture, "ROTATE_HORZ", INT2FIX(ROTATE_HORZ));
+  rb_define_const(rb_cTexture, "ROTATE_VERT", INT2FIX(ROTATE_VERT));
 
-  ID_expand_path    = rb_intern("expand_path");
-  ID_extname        = rb_intern("extname");
+  rb_define_const(rb_cTexture, "MASK_ALPHA",  INT2FIX(MASK_ALPHA));
+  rb_define_const(rb_cTexture, "MASK_GRAY",   INT2FIX(MASK_GRAY));
+  rb_define_const(rb_cTexture, "MASK_RED",    INT2FIX(MASK_RED));
+  rb_define_const(rb_cTexture, "MASK_GREEN",  INT2FIX(MASK_GREEN));
+  rb_define_const(rb_cTexture, "MASK_BLUE",   INT2FIX(MASK_BLUE));
 
   return rb_cTexture;
 }

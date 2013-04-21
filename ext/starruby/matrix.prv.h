@@ -151,7 +151,7 @@
 #define MATRIX_MATH_MATRIX_BANG_FUNC(namespace, strct, arytype, datatype, rbconv, word, sym, zero_protect) \
   static VALUE namespace ## _ ## word ## _matrix_bang(VALUE self, VALUE rbMatrix) \
   { \
-    strb_CheckMatrixI(self); \
+    strb_CheckObjIsKindOf(self, rb_cMatrixI); \
     strct *trg_matrix, *src_matrix; \
     Data_Get_Struct(self, strct, trg_matrix); \
     Data_Get_Struct(rbMatrix, strct, src_matrix); \
@@ -217,11 +217,11 @@
     uint32_t trgSize, startSize, endSize, stackSize;\
     int32_t src_num = 0; \
     \
-    strb_CheckMatrixI(self); \
+    strb_CheckObjIsKindOf(self, rb_cMatrixI); \
     Data_Get_Struct(self, MatrixI, trg_matrix); \
     if(using_matrix) \
     { \
-      strb_Check ## strct(rbObj); \
+      strb_CheckObjIsKindOf(rbObj, rb_c ## strct); \
       Data_Get_Struct(rbObj, MatrixI, src_matrix); \
     } \
     else \
@@ -229,9 +229,9 @@
       src_num = FIX2INT(rbObj); \
     } \
     \
-    rbTrgSize   = rb_funcall(rbTrgCoords, sym_size, 0); \
-    rbStartSize = rb_funcall(rbCoordStart, sym_size, 0); \
-    rbEndSize   = rb_funcall(rbCoordEnd, sym_size, 0); \
+    rbTrgSize   = rb_funcall(rbTrgCoords, ID_size, 0); \
+    rbStartSize = rb_funcall(rbCoordStart, ID_size, 0); \
+    rbEndSize   = rb_funcall(rbCoordEnd, ID_size, 0); \
     trgSize   = FIX2INT(rbTrgSize); \
     startSize = FIX2INT(rbStartSize); \
     endSize   = FIX2INT(rbEndSize); \

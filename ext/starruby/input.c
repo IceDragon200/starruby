@@ -1,5 +1,7 @@
 #include "starruby.prv.h"
 
+volatile VALUE rb_mInput = Qundef;
+
 typedef struct KeyboardKey {
   VALUE rbSymbol;
   SDLKey sdlKey;
@@ -27,21 +29,6 @@ typedef struct {
   int rightState;
 } Mouse;
 static Mouse* mouse;
-
-static volatile VALUE rb_mInput = Qundef;
-
-static volatile VALUE symbol_delay         = Qundef;
-static volatile VALUE symbol_device_number = Qundef;
-static volatile VALUE symbol_down          = Qundef;
-static volatile VALUE symbol_duration      = Qundef;
-static volatile VALUE symbol_gamepad       = Qundef;
-static volatile VALUE symbol_interval      = Qundef;
-static volatile VALUE symbol_keyboard      = Qundef;
-static volatile VALUE symbol_left          = Qundef;
-static volatile VALUE symbol_middle        = Qundef;
-static volatile VALUE symbol_mouse         = Qundef;
-static volatile VALUE symbol_right         = Qundef;
-static volatile VALUE symbol_up            = Qundef;
 
 static VALUE
 Input_gamepad_count(VALUE self)
@@ -182,7 +169,7 @@ Input_keys(int argc, VALUE* argv, VALUE self)
     }
   } else {
     volatile VALUE rbDeviceInspect =
-      rb_funcall(rbDevice, rb_intern("inspect"), 0);
+      rb_funcall(rbDevice, ID_inspect, 0);
     rb_raise(rb_eArgError, "invalid device: %s", StringValueCStr(rbDeviceInspect));
   }
 
@@ -372,6 +359,12 @@ strb_InitializeSdlInput()
   MEMZERO(mouse, Mouse, 1);
 }
 
+VALUE Input_update(VALUE module)
+{
+  strb_UpdateInput();
+  return Qnil;
+}
+
 VALUE
 strb_InitializeInput(VALUE rb_mStarRuby)
 {
@@ -383,19 +376,7 @@ strb_InitializeInput(VALUE rb_mStarRuby)
   rb_define_module_function(rb_mInput, "mouse_location=",
                             Input_mouse_location_eq, 1);
   rb_define_module_function(rb_mInput, "keys",   Input_keys, -1);
-
-  symbol_delay         = ID2SYM(rb_intern("delay"));
-  symbol_device_number = ID2SYM(rb_intern("device_number"));
-  symbol_down          = ID2SYM(rb_intern("down"));
-  symbol_duration      = ID2SYM(rb_intern("duration"));
-  symbol_gamepad       = ID2SYM(rb_intern("gamepad"));
-  symbol_interval      = ID2SYM(rb_intern("interval"));
-  symbol_keyboard      = ID2SYM(rb_intern("keyboard"));
-  symbol_left          = ID2SYM(rb_intern("left"));
-  symbol_middle        = ID2SYM(rb_intern("middle"));
-  symbol_mouse         = ID2SYM(rb_intern("mouse"));
-  symbol_right         = ID2SYM(rb_intern("right"));
-  symbol_up            = ID2SYM(rb_intern("up"));
+  rb_define_module_function(rb_mInput, "update", Input_update, 0);
 
   volatile VALUE rbMouseLocation = rb_assoc_new(INT2FIX(0), INT2FIX(0));
   OBJ_FREEZE(rbMouseLocation);

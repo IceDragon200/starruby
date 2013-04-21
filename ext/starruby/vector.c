@@ -11,15 +11,11 @@
 #include "vector.h"
 #include "vector.prv.h"
 
-static void Vector2I_free(Vector2I*);
-static void Vector3I_free(Vector3I*);
-static void Vector2F_free(Vector2F*);
-static void Vector3F_free(Vector3F*);
-
-STRUCT_CHECK_TYPE_FUNC(Vector2I, Vector2I);
-STRUCT_CHECK_TYPE_FUNC(Vector3I, Vector3I);
-STRUCT_CHECK_TYPE_FUNC(Vector2F, Vector2F);
-STRUCT_CHECK_TYPE_FUNC(Vector3F, Vector3F);
+volatile VALUE rb_cVector = Qundef;
+volatile VALUE rb_cVector2I = Qundef;
+volatile VALUE rb_cVector3I = Qundef;
+volatile VALUE rb_cVector2F = Qundef;
+volatile VALUE rb_cVector3F = Qundef;
 
 // ATTR_ACCESSOR(namespace, struct, attribute, reader, writer)
 VECTOR_ACCESSOR2(Vector2I, Vector2I, INT2NUM, NUM2INT);
@@ -47,20 +43,30 @@ VECTOR_TO_A3(Vector3I, Vector3I, INT2NUM);
 VECTOR_TO_A2(Vector2F, Vector2F, DBL2NUM);
 VECTOR_TO_A3(Vector3F, Vector3F, DBL2NUM);
 
+VECTOR_TO_S2(Vector2I, Vector2I, INT2NUM);
+VECTOR_TO_S3(Vector3I, Vector3I, INT2NUM);
+VECTOR_TO_S2(Vector2F, Vector2F, DBL2NUM);
+VECTOR_TO_S3(Vector3F, Vector3F, DBL2NUM);
+
 VECTOR_MARSHAL2(Vector2I, Vector2I, INT2NUM, NUM2INT);
 VECTOR_MARSHAL3(Vector3I, Vector3I, INT2NUM, NUM2INT);
 VECTOR_MARSHAL2(Vector2F, Vector2F, DBL2NUM, NUM2DBL);
 VECTOR_MARSHAL3(Vector3F, Vector3F, DBL2NUM, NUM2DBL);
 
-static VALUE rb_cVector = Qundef;
-static VALUE rb_cVector2I = Qundef;
-static VALUE rb_cVector2F = Qundef;
-static VALUE rb_cVector3I = Qundef;
-static VALUE rb_cVector3F = Qundef;
+VALUE Vector_compare(VALUE self, VALUE rbOther)
+{
+  VALUE ary1, ary2;
+  ary1 = rb_funcall(self, ID_to_a, 0);
+  ary2 = rb_funcall(rbOther, ID_to_a, 0);
+  return rb_funcall(self, ID_compare, 2, ary1, ary2);
+}
 
 VALUE strb_InitializeVector(VALUE rb_mStarRuby)
 {
   rb_cVector   = rb_define_class_under(rb_mStarRuby, "Vector", rb_cObject);
+  rb_include_module(rb_cVector, rb_mComparable);
+  rb_define_method(rb_cVector, "<=>", Vector_compare, 1);
+
   rb_cVector2I = rb_define_class_under(rb_mStarRuby, "Vector2I", rb_cVector);
   rb_cVector2F = rb_define_class_under(rb_mStarRuby, "Vector2F", rb_cVector);
   rb_cVector3I = rb_define_class_under(rb_mStarRuby, "Vector3I", rb_cVector);
@@ -161,6 +167,11 @@ VALUE strb_InitializeVector(VALUE rb_mStarRuby)
   rb_define_method(rb_cVector3I, "to_a", Vector3I_to_a, 0);
   rb_define_method(rb_cVector2F, "to_a", Vector2F_to_a, 0);
   rb_define_method(rb_cVector3F, "to_a", Vector3F_to_a, 0);
+
+  rb_define_method(rb_cVector2I, "to_s", Vector2I_to_s, 0);
+  rb_define_method(rb_cVector3I, "to_s", Vector3I_to_s, 0);
+  rb_define_method(rb_cVector2F, "to_s", Vector2F_to_s, 0);
+  rb_define_method(rb_cVector3F, "to_s", Vector3F_to_s, 0);
 
   rb_define_method(rb_cVector2I, "marshal_dump", Vector2I_marshal_dump, 0);
   rb_define_method(rb_cVector3I, "marshal_dump", Vector3I_marshal_dump, 0);

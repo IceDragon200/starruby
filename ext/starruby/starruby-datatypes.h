@@ -5,33 +5,33 @@
   #define STARRUBY_DATATYPE_H
 
   typedef struct {
-    uint8_t blue, green, red;
+    UByte blue, green, red;
   } Color24le;
 
   typedef struct {
-    uint8_t blue, green, red, alpha;
+    UByte blue, green, red, alpha;
   } Color32le;
 
   typedef struct
   {
-    uint8_t blue, green, red;
+    UByte blue, green, red;
     float alpha;
   } Color32leAf;
 
   typedef struct {
-    uint8_t red, green, blue;
+    UByte red, green, blue;
   } Color24be;
 
   typedef struct
   {
-    uint8_t alpha, red, green, blue;
+    UByte alpha, red, green, blue;
   } Color32be;
 
   /* Alpha Float */
   typedef struct
   {
-    float alpha;
-    uint8_t red, green, blue;
+    Float alpha;
+    UByte red, green, blue;
   } Color32beAf;
 
   #if SDL_BYTEORDER == SDL_LIL_ENDIAN
@@ -47,24 +47,27 @@
   #define Color Color32
 
   typedef struct {
-    uint8_t saturation;
-    int16_t red, green, blue;
+    UByte saturation;
+    SShort red, green, blue;
   } Tone;
 
   typedef union {
     Color color;
-    uint32_t value;
+    UInteger value;
   } Pixel;
 
   // StarRuby Texture
   typedef struct {
-    uint16_t width, height;
-    bool binded; // for use with cairo surfaces
     Pixel* pixels;
+    UShort width, height;
+    Boolean binded;            // for use with cairo surfaces
   } Texture;
 
   typedef struct {
-    int32_t size;
+    Integer size;
+    Boolean is_bold;
+    Boolean is_italic;
+    Boolean is_underline;
     TTF_Font* sdlFont;
   } Font;
 

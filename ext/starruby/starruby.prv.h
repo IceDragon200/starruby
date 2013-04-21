@@ -8,9 +8,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <SDL.h>
-//#include <SDL_mixer.h>
+#ifdef HAVE_SDL_MIXER
+  #include <SDL_mixer.h>
+#endif
 #include <SDL_ttf.h>
 #include <SDL_opengl.h>
+#include <assert.h>
+#ifdef STRB_CAN_LOAD_SVG
+  #include <librsvg/rsvg.h>
+#endif
+
+#include "kyameru.h"
 
 /* Ruby Related Headers */
 #include <ruby.h>
@@ -40,7 +48,7 @@
 # endif
 #endif
 
-#include "../cairo/lib/rb_cairo.h"
+#include "rb_cairo.h"
 
 #ifndef PI
 # ifdef M_PI
@@ -50,39 +58,18 @@
 # endif
 #endif
 
+#include "rb_classes.h"
+#include "rb_symbols.h"
 #include "starruby-version.h"
 #include "starruby-datatypes.h"
 #include "starruby-convert.h"
 #include "starruby-helpers.h"
 #include "starruby-accessor.h"
-
-#define rb_raise_sdl_error() \
-  rb_raise(strb_GetStarRubyErrorClass(), "%s", SDL_GetError())
-#define rb_raise_sdl_mix_error() \
-  rb_raise(strb_GetStarRubyErrorClass(), "%s", Mix_GetError())
-#define rb_raise_sdl_ttf_error() \
-  rb_raise(strb_GetStarRubyErrorClass(), "%s", TTF_GetError())
-#define rb_raise_opengl_error() \
-  rb_raise(strb_GetStarRubyErrorClass(), "OpenGL Error: 0x%x", glGetError());
-
-extern VALUE rb_eStarRubyError;
-
-VALUE strb_GetColorClass(void);
-VALUE strb_GetStarRubyErrorClass(void);
-VALUE strb_GetTextureClass(void);
-VALUE strb_GetRectClass(void);
+#include "starruby-errors.h"
 
 VALUE strb_GetCompletePath(VALUE, bool);
 
 void strb_GetColorFromRubyValue(Color*, VALUE);
-
-void strb_CheckFont(VALUE rbFont);
-void strb_CheckTexture(VALUE rbTexture);
-void strb_CheckRect(VALUE rbRect);
-void strb_CheckVector2I(VALUE rbVector2I);
-void strb_CheckVector2F(VALUE rbVector2F);
-void strb_CheckVector3I(VALUE rbVector3I);
-void strb_CheckVector3F(VALUE rbVector3F);
 
 void strb_UpdateInput(void);
 
@@ -97,8 +84,10 @@ void strb_GetRealScreenSize(int*, int*);
 void strb_GetScreenSize(int*, int*);
 int strb_GetWindowScale(void);
 
-void strb_CheckDisposedTexture(const Texture* const);
+void strb_TextureCheckDisposed(const Texture* const);
 bool strb_Texture_is_disposed(const Texture* const);
+
+VALUE strb_CheckObjIsKindOf(VALUE rbObj, VALUE rbKind);
 
 #ifdef DEBUG
   #include <assert.h>

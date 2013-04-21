@@ -15,13 +15,13 @@ Texture_render_text(int argc, VALUE* argv, VALUE self)
   const bool antiAlias = RTEST(rbAntiAlias);
   const char* text = StringValueCStr(rbText);
 
-  strb_CheckFont(rbFont);
+  strb_CheckObjIsKindOf(rbFont, rb_cFont);
 
   const Font* font;
 
   Data_Get_Struct(rbFont, Font, font);
 
-  volatile VALUE rbSize = rb_funcall(rbFont, rb_intern("get_size"), 1, rbText);
+  volatile VALUE rbSize = rb_funcall(rbFont, ID_get_size, 1, rbText);
   volatile VALUE rbTextTexture =
     rb_class_new_instance(2, RARRAY_PTR(rbSize), rb_cTexture);
 
@@ -78,7 +78,7 @@ Texture_render_text(int argc, VALUE* argv, VALUE self)
   Texture *dstTexture;
   Data_Get_Struct(self, Texture, dstTexture);
 
-  RenderTexture(textTexture, dstTexture,
+  strb_TextureRender(textTexture, dstTexture,
     0, 0, textTexture->width, textTexture->height, NUM2INT(rbX), NUM2INT(rbY),
     255, NULL, NULL, 1);
 

@@ -15,7 +15,7 @@ Texture_blur(VALUE self)
   rb_check_frozen(self);
   Texture* texture, *src_texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   VALUE src_rbTexture = rb_obj_dup(self);
   Data_Get_Struct(src_rbTexture, Texture, src_texture);
@@ -57,7 +57,7 @@ Texture_blur(VALUE self)
     }
   }
 
-  rb_funcall(src_rbTexture, rb_intern("dispose"), 0);
+  rb_funcall(src_rbTexture, ID_dispose, 0);
 
   return self;
 }

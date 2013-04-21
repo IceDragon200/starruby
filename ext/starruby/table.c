@@ -3,9 +3,14 @@
   */
 #include "starruby.prv.h"
 
+volatile VALUE rb_cTable = Qundef;
+
+typedef Short TableData_t;
+typedef Short* TableDataPtr;
+
 typedef struct {
-  uint16_t dim, xsize, ysize, zsize, size;
-  int32_t *data;
+  Bignum dim, xsize, ysize, zsize, size;
+  TableDataPtr data;
 } RGXTable;
 
 #define GET_TABLE(self, ptr)        \
@@ -25,8 +30,6 @@ typedef struct {
       return INT2FIX(0);                                          \
     }
 #endif
-
-static volatile VALUE rb_cTable = Qundef;
 
 static void
 Table_free(RGXTable* table)
@@ -200,8 +203,8 @@ rb_tb_resize(int argc, VALUE* argv, VALUE self)
   const int orgsize = source_tb->size;
   const int size = xsize * ysize * zsize;
 
-  int *orgtable = source_tb->data;
-  int *temp = realloc(orgtable, size * sizeof(int));
+  TableData_t *orgtable = source_tb->data;
+  TableData_t *temp = realloc(orgtable, size * sizeof(int));
 
   if(temp != NULL)
   {
@@ -276,8 +279,8 @@ rb_tb_initialize(int argc, VALUE* argv, VALUE self)
   table->ysize = ysize;
   table->zsize = zsize;
   table->size  = size;
-  table->data  = ALLOC_N(int, size);
-  MEMZERO(table->data, int, size);
+  table->data  = ALLOC_N(TableData_t, size);
+  MEMZERO(table->data, TableData_t, size);
 
   return Qnil;
 }
@@ -294,10 +297,10 @@ rb_tb_initialize_copy(VALUE self, VALUE rbTable)
   trg_table->zsize = src_table->zsize;
   trg_table->size = src_table->size;
 
-  const int size = src_table->size;
+  const Size size = src_table->size;
 
-  trg_table->data = ALLOC_N(int, size);
-  MEMCPY(trg_table->data, src_table->data, int, size);
+  trg_table->data = ALLOC_N(TableData_t, size);
+  MEMCPY(trg_table->data, src_table->data, TableData_t, size);
 
   return Qnil;
 }
@@ -307,14 +310,13 @@ rb_tb_to_a(VALUE self)
 {
   GET_TABLE(self, source_tb);
 
-  int size = source_tb->size;
+  Size size = source_tb->size;
 
-  int* tb_data = source_tb->data;
+  TableDataPtr tb_data = source_tb->data;
 
   VALUE ary = rb_ary_new();
 
-  int i;
-  for(i = 0; i < size; i++){
+  for(UInteger i = 0; i < size; i++){
     rb_ary_push(ary, INT2FIX(tb_data[i]));
   }
 
@@ -324,9 +326,9 @@ rb_tb_to_a(VALUE self)
 static VALUE
 rb_tb_clear(VALUE self)
 {
-  GET_TABLE(self, source_tb);
-
-  source_tb->data = ALLOC_N(int, source_tb->size);
+  RGXTable* table;
+  Data_Get_Struct(self, RGXTable, table);
+  MEMZERO(table->data, TableData_t, table->size);
 
   return self;
 }
@@ -334,7 +336,6 @@ rb_tb_clear(VALUE self)
 static VALUE
 rb_tb_dump(VALUE self, VALUE depth)
 {
-  const ID sym_pack = rb_intern("pack");
   // dim, xsize, ysize, zsize, size, data
   GET_TABLE(self, table);
 
@@ -345,22 +346,20 @@ rb_tb_dump(VALUE self, VALUE depth)
   rb_ary_push(header_ary, INT2FIX(table->zsize));
   rb_ary_push(header_ary, INT2FIX(table->size));
 
-  VALUE header_str = rb_funcall(
-    header_ary, sym_pack, 1, rb_str_new2("l5\0"));
+  VALUE header_str = rb_funcall(header_ary, ID_pack, 1, rb_str_new2("l5\0"));
 
   const int size = table->size;
-  int* data = table->data;
+  TableDataPtr data = table->data;
   volatile VALUE vstr;
 
   for(int i = 0; i < size; i++)
   {
-    int d = data[i];
+    TableData_t d = data[i];
 
     VALUE ary = rb_ary_new();
     rb_ary_push(ary, INT2FIX(d));
 
-    vstr = rb_funcall(
-      ary, sym_pack, 1, rb_str_new2("s\0"));
+    vstr = rb_funcall(ary, ID_pack, 1, rb_str_new2("s\0"));
 
     rb_str_concat(header_str, vstr);
   }
@@ -371,15 +370,12 @@ rb_tb_dump(VALUE self, VALUE depth)
 static VALUE
 rb_tb_load(VALUE klass, VALUE rbStr)
 {
-  const ID sym_unpack = rb_intern("unpack");
-  const ID sym_get = rb_intern("[]");
-
   VALUE rbTmp, rbTmp2;
   VALUE rbDim, rbNx, rbNy, rbNz, rbSize;
 
   // dim, nx, ny, nz, nsize = *s[0, 20].unpack('L5')
-  rbTmp  = rb_funcall(rbStr, sym_get, 2, INT2NUM(0), INT2NUM(20));
-  rbTmp2 = rb_funcall(rbTmp, sym_unpack, 1, rb_str_new2("l5\0"));
+  rbTmp  = rb_funcall(rbStr, ID_array_get, 2, INT2NUM(0), INT2NUM(20));
+  rbTmp2 = rb_funcall(rbTmp, ID_unpack, 1, rb_str_new2("l5\0"));
 
   rbDim  = rb_ary_entry(rbTmp2, 0);
   rbNx   = rb_ary_entry(rbTmp2, 1);
@@ -389,15 +385,15 @@ rb_tb_load(VALUE klass, VALUE rbStr)
 
   const int size = NUM2INT(rbSize);
   VALUE rbData = rb_funcall(
-    rbStr, sym_get, 2, INT2NUM(20), INT2NUM(size * 2));
-  VALUE rbAry = rb_funcall(rbData, sym_unpack, 1, rb_str_new2("s*\0"));
+    rbStr, ID_array_get, 2, INT2NUM(20), INT2NUM(size * 2));
+  VALUE rbAry = rb_funcall(rbData, ID_unpack, 1, rb_str_new2("s*\0"));
 
   int argc = FIX2INT(rbDim);
   VALUE argv[3] = { rbNx, rbNy, rbNz };
 
   VALUE rbTable = rb_class_new_instance(argc, argv, klass);
   GET_TABLE(rbTable, ctable);
-  int* data = ctable->data;
+  TableDataPtr data = ctable->data;
 
   for(int i = 0; i < size; i++) {
     volatile VALUE rbN = rb_ary_entry(rbAry, i);

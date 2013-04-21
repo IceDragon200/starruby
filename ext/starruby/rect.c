@@ -5,16 +5,9 @@
 #include "starruby.prv.h"
 #include "rect.h"
 
-static VALUE rb_cRect = Qundef;
+volatile VALUE rb_cRect = Qundef;
 
-VALUE
-strb_GetRectClass(void)
-{
-  return rb_cRect;
-}
-
-static void Rect_free(Rect*);
-STRUCT_CHECK_TYPE_FUNC(Rect, Rect);
+#define PACK_l4 (rb_str_new2("l4\0"))
 
 STRUCT_ATTR_ACCESSOR(Rect, Rect, x, INT2NUM, NUM2INT);
 STRUCT_ATTR_ACCESSOR(Rect, Rect, y, INT2NUM, NUM2INT);
@@ -40,7 +33,7 @@ Rect_set(int argc, VALUE *argv, VALUE self)
   else if(argc == 1)
   {
     rb_scan_args(argc, argv, "10", &rbRect);
-    strb_CheckRect(rbRect);
+    strb_CheckObjIsKindOf(rbRect, rb_cRect);
     Data_Get_Struct(rbRect, Rect, src_rect);
 
     rbX = INT2NUM(src_rect->x);
@@ -95,6 +88,7 @@ Rect_to_a(VALUE self)
 static VALUE
 Rect_empty(VALUE self)
 {
+  rb_check_frozen(self);
   Rect *rect;
   Data_Get_Struct(self, Rect, rect);
 
@@ -118,15 +112,13 @@ Rect_is_empty(VALUE self)
 static VALUE
 Rect_dump(VALUE self, VALUE rbDepth)
 {
-  return rb_funcall(Rect_to_a(self),
-    rb_intern("pack"), 1, rb_str_new2("l4\0"));
+  return rb_funcall(Rect_to_a(self), ID_pack, 1, PACK_l4);
 }
 
 static VALUE
 Rect_load(VALUE klass, VALUE rbDStr)
 {
-  volatile VALUE rbUAry = rb_funcall(
-    rbDStr, rb_intern("unpack"), 1, rb_str_new2("l4\0"));
+  volatile VALUE rbUAry = rb_funcall(rbDStr, ID_unpack, 1, PACK_l4);
 
   VALUE rbArgv[4] = {
     rb_ary_entry(rbUAry, 0), rb_ary_entry(rbUAry, 1), // x, y

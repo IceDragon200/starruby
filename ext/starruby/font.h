@@ -8,12 +8,6 @@
     static volatile VALUE rbWindowsFontDirPathSymbol = Qundef;
   #endif
 
-  static VALUE rbFontCache = Qundef;
-
-  static volatile VALUE symbol_bold      = Qundef;
-  static volatile VALUE symbol_italic    = Qundef;
-  static volatile VALUE symbol_ttc_index = Qundef;
-
   typedef struct FontFileInfo {
     VALUE rbFontNameSymbol;
     VALUE rbFileNameSymbol;

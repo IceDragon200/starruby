@@ -2,9 +2,11 @@
   #define STARRUBY_H
 
   #include "starruby.prv.h"
+  #include "kyameru-impl.h"
 
-  void Init_starruby(void);
+  Void Init_starruby(Void);
 
+  VALUE strb_InitializeSymbols(VALUE rb_mStarRuby);
   VALUE strb_InitializeAudio(VALUE rb_mStarRuby);
   VALUE strb_InitializeColor(VALUE rb_mStarRuby);
   VALUE strb_InitializeFont(VALUE rb_mStarRuby);

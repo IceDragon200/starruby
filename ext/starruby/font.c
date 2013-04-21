@@ -1,109 +1,19 @@
 #include "starruby.prv.h"
 #include "font.h"
+#include "font/search-font.inc.c"
 
-static void Font_free(Font*);
-STRUCT_CHECK_TYPE_FUNC(Font, Font);
+volatile VALUE rb_cFont = Qundef;
 
-static void
-SearchFont(VALUE rbFilePathOrName,
-           VALUE* volatile rbRealFilePath, int* ttcIndex)
-{
-  *rbRealFilePath = Qnil;
-  if (ttcIndex != NULL) {
-    *ttcIndex = -1;
-  }
-  *rbRealFilePath = strb_GetCompletePath(rbFilePathOrName, false);
-  if (!NIL_P(*rbRealFilePath)) {
-    return;
-  }
-  volatile VALUE rbFontNameSymbol =
-    ID2SYM(rb_intern_str(rbFilePathOrName));
-  FontFileInfo* info = fontFileInfos;
-  while (info) {
-    if (info->rbFontNameSymbol == rbFontNameSymbol) {
-      *rbRealFilePath = rb_str_new2(rb_id2name(SYM2ID(info->rbFileNameSymbol)));
-#ifdef WIN32
-      volatile VALUE rbTemp =
-        rb_str_new2(rb_id2name(SYM2ID(rbWindowsFontDirPathSymbol)));
-      *rbRealFilePath = rb_str_concat(rb_str_cat2(rbTemp, "\\"), *rbRealFilePath);
-#endif
-      if (ttcIndex != NULL) {
-        *ttcIndex = info->ttcIndex;
-      }
-      return;
-    }
-    info = info->next;
-  }
-#ifdef HAVE_FONTCONFIG_FONTCONFIG_H
-  if (!FcInit()) {
-    FcFini();
-    rb_raise(strb_GetStarRubyErrorClass(), "can't initialize fontconfig library");
-    return;
-  }
-  int nameLength = RSTRING_LEN(rbFilePathOrName) + 1;
-  char name[nameLength];
-  strncpy(name, StringValueCStr(rbFilePathOrName), nameLength);
-  char* delimiter = strchr(name, ',');
-  char* style = NULL;
-  if (delimiter) {
-    *delimiter = '\0';
-    style = delimiter + 1;
-    char* nameTail = delimiter - 1;
-    while (*nameTail == ' ') {
-      *nameTail = '\0';
-      nameTail--;
-    }
-    while (*style == ' ') {
-      style++;
-    }
-  }
-  FcPattern* pattern = FcPatternBuild(NULL, FC_FAMILY, FcTypeString, name, NULL);
-  if (style && 0 < strlen(style)) {
-    FcPatternAddString(pattern, FC_STYLE, (FcChar8*)style);
-  }
-  FcObjectSet* objectSet = FcObjectSetBuild(FC_FAMILY, FC_FILE, NULL);
-  FcFontSet* fontSet = FcFontList(NULL, pattern, objectSet);
-  if (objectSet) {
-    FcObjectSetDestroy(objectSet);
-  }
-  if (pattern) {
-    FcPatternDestroy(pattern);
-  }
-  if (fontSet) {
-    for (int i = 0; i < fontSet->nfont; i++) {
-      FcChar8* fileName = NULL;
-      if (FcPatternGetString(fontSet->fonts[i], FC_FILE, 0, &fileName) ==
-          FcResultMatch) {
-        FcChar8* fontName = FcNameUnparse(fontSet->fonts[i]);
-        *rbRealFilePath = rb_str_new2((char*)fileName);
-        volatile VALUE rbFontName = rb_str_new2((char*)fontName);
-        free(fontName);
-        fontName = NULL;
-        if (ttcIndex != NULL && strchr(StringValueCStr(rbFontName), ',')) {
-          *ttcIndex = 0;
-        }
-      }
-    }
-    FcFontSetDestroy(fontSet);
-  }
-  FcFini();
-  if (!NIL_P(*rbRealFilePath)) {
-    return;
-  }
-#endif
-  return;
-}
+#define DEFAULT_FONT_SIZE 20
 
-static VALUE
-Font_s_exist(VALUE self, VALUE rbFilePath)
+static VALUE Font_s_exist(VALUE self, VALUE rbFilePath)
 {
   volatile VALUE rbRealFilePath = Qnil;
-  SearchFont(rbFilePath, (VALUE*)&rbRealFilePath, NULL);
+  SearchFont(rbFilePath, (VALUE*)&rbRealFilePath, Null);
   return !NIL_P(rbRealFilePath) ? Qtrue : Qfalse;
 }
 
-static void
-Font_free(Font* font)
+static Void Font_free(Font* font)
 {
   if (TTF_WasInit()) {
     TTF_CloseFont(font->sdlFont);
@@ -112,27 +22,52 @@ Font_free(Font* font)
   free(font);
 }
 
-static VALUE
-Font_s_new(int argc, VALUE* argv, VALUE self)
+static VALUE Font_alloc(VALUE klass)
 {
-  volatile VALUE rbPath, rbSize, rbOptions;
+  Font* font         = ALLOC(Font);
+  font->size         = DEFAULT_FONT_SIZE;
+  font->is_bold      = False;
+  font->is_italic    = False;
+  font->is_underline = False;
+  font->sdlFont      = Null;
+  return Data_Wrap_Struct(klass, Null, Font_free, font);
+}
+
+Void strb_FontRefreshStyle(Font *font)
+{
+  const int style = TTF_STYLE_NORMAL |
+                    (font->is_bold ? TTF_STYLE_BOLD : 0) |
+                    (font->is_italic ? TTF_STYLE_ITALIC : 0) |
+                    (font->is_underline ? TTF_STYLE_UNDERLINE : 0);
+  TTF_SetFontStyle(font->sdlFont, style);
+}
+
+/* TODO
+     Change args to a hash
+ */
+static VALUE Font_initialize(Size argc, VALUE* argv, VALUE self)
+{
+  VALUE rbPath,
+        rbRealFilePath,
+        rbSize,
+        rbOptions,
+        val;
+  Boolean bold = False,
+          italic = False,
+          underline = False;
+  Integer ttcIndex = -1;
   rb_scan_args(argc, argv, "21", &rbPath, &rbSize, &rbOptions);
   if (NIL_P(rbOptions)) {
     rbOptions = rb_hash_new();
   }
-  volatile VALUE rbRealFilePath;
-  int preTtcIndex = -1;
-  SearchFont(rbPath, (VALUE*)&rbRealFilePath, &preTtcIndex);
+  SearchFont(rbPath, (VALUE*)&rbRealFilePath, &ttcIndex);
+
   if (NIL_P(rbRealFilePath)) {
     char* path = StringValueCStr(rbPath);
     rb_raise(rb_path2class("Errno::ENOENT"), "%s", path);
     return Qnil;
   }
-  int size = NUM2INT(rbSize);
-  bool bold = false;
-  bool italic = false;
-  int ttcIndex = 0;
-  volatile VALUE val;
+
   Check_Type(rbOptions, T_HASH);
   if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_bold))) {
     bold = RTEST(val);
@@ -140,103 +75,88 @@ Font_s_new(int argc, VALUE* argv, VALUE self)
   if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_italic))) {
     italic = RTEST(val);
   }
-  if (preTtcIndex != -1) {
-    ttcIndex = preTtcIndex;
-  } else if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_ttc_index))) {
+  if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_underline))) {
+    underline = RTEST(val);
+  }
+  if (!NIL_P(val = rb_hash_aref(rbOptions, symbol_ttc_index))) {
     ttcIndex = NUM2INT(val);
   }
-  volatile VALUE rbHashKey = rb_str_dup(rbRealFilePath);
-  char temp[256];
-  // TODO: change the delimiter or the way to name a hash key
-  rb_str_cat2(rbHashKey, ";size=");
-  snprintf(temp, sizeof(temp), "%d", size);
-  rb_str_cat2(rbHashKey, temp);
-  if (bold) {
-    rb_str_cat2(rbHashKey, ";bold=true");
-  } else {
-    rb_str_cat2(rbHashKey, ";bold=false");
+  if (ttcIndex == -1) {
+    ttcIndex = 0;
   }
-  if (italic) {
-    rb_str_cat2(rbHashKey, ";italic=true");
-  } else {
-    rb_str_cat2(rbHashKey, ";italic=false");
-  }
-  rb_str_cat2(rbHashKey, ";ttc_index=");
-  snprintf(temp, sizeof(temp), "%d", ttcIndex);
-  rb_str_cat2(rbHashKey, temp);
 
-  if (!NIL_P(val = rb_hash_aref(rbFontCache, rbHashKey))) {
-    return val;
-  } else {
-    VALUE args[] = {
-      rbRealFilePath,
-      rbSize,
-      bold ? Qtrue : Qfalse,
-      italic ? Qtrue : Qfalse,
-      INT2NUM(ttcIndex),
-    };
-    volatile VALUE rbNewFont =
-      rb_class_new_instance(sizeof(args) / sizeof(VALUE), args, self);
-    rb_hash_aset(rbFontCache, rbHashKey, rbNewFont);
-    return rbNewFont;
-  }
-}
-
-static VALUE
-Font_alloc(VALUE klass)
-{
-  Font* font = ALLOC(Font);
-  font->sdlFont = NULL;
-  return Data_Wrap_Struct(klass, 0, Font_free, font);
-}
-
-static VALUE
-Font_initialize(VALUE self, VALUE rbRealFilePath, VALUE rbSize,
-                VALUE rbBold, VALUE rbItalic, VALUE rbTtcIndex)
-{
   const char* path   = StringValueCStr(rbRealFilePath);
-  const int size     = NUM2INT(rbSize);
-  const bool bold    = RTEST(rbBold);
-  const bool italic  = RTEST(rbItalic);
-  const int ttcIndex = NUM2INT(rbTtcIndex);
-
+  const Integer size = NUM2INT(rbSize);
   Font* font;
   Data_Get_Struct(self, Font, font);
-  font->size = size;
+  font->size         = size;
+  font->is_bold      = bold;
+  font->is_italic    = italic;
+  font->is_underline = underline;
   font->sdlFont = TTF_OpenFontIndex(path, size, ttcIndex);
   if (!font->sdlFont) {
-    rb_raise(strb_GetStarRubyErrorClass(), "%s (%s)", TTF_GetError(), path);
+    rb_raise(rb_eStarRubyError, "%s (%s)", TTF_GetError(), path);
   }
-  const int style = TTF_STYLE_NORMAL |
-    (bold ? TTF_STYLE_BOLD : 0) | (italic ? TTF_STYLE_ITALIC : 0);
-  TTF_SetFontStyle(font->sdlFont, style);
+
+  strb_FontRefreshStyle(font);
 
   return Qnil;
 }
 
-static VALUE
-Font_bold(VALUE self)
+static VALUE Font_bold(VALUE self)
 {
   const Font* font;
   Data_Get_Struct(self, Font, font);
   return (TTF_GetFontStyle(font->sdlFont) & TTF_STYLE_BOLD) ? Qtrue : Qfalse;
 }
 
-static VALUE
-Font_italic(VALUE self)
+static VALUE Font_bold_set(VALUE self, VALUE rbBool)
+{
+  Font* font;
+  Data_Get_Struct(self, Font, font);
+  font->is_bold = RTEST(rbBool);
+  strb_FontRefreshStyle(font);
+  return Qnil;
+}
+
+static VALUE Font_italic(VALUE self)
 {
   const Font* font;
   Data_Get_Struct(self, Font, font);
   return (TTF_GetFontStyle(font->sdlFont) & TTF_STYLE_ITALIC) ? Qtrue : Qfalse;
 }
 
-static VALUE
-Font_get_size(VALUE self, VALUE rbText)
+static VALUE Font_italic_set(VALUE self, VALUE rbBool)
+{
+  Font* font;
+  Data_Get_Struct(self, Font, font);
+  font->is_italic = RTEST(rbBool);
+  strb_FontRefreshStyle(font);
+  return Qnil;
+}
+
+static VALUE Font_underline(VALUE self)
 {
   const Font* font;
   Data_Get_Struct(self, Font, font);
-  const char* text = StringValueCStr(rbText);
-  int width, height;
+  return (TTF_GetFontStyle(font->sdlFont) & TTF_STYLE_UNDERLINE) ? Qtrue : Qfalse;
+}
+
+static VALUE Font_underline_set(VALUE self, VALUE rbBool)
+{
+  Font* font;
+  Data_Get_Struct(self, Font, font);
+  font->is_underline = RTEST(rbBool);
+  strb_FontRefreshStyle(font);
+  return Qnil;
+}
+
+static VALUE Font_get_size(VALUE self, VALUE rbText)
+{
+  const Font* font;
+  Data_Get_Struct(self, Font, font);
+  const String text = StringValueCStr(rbText);
+  Integer width, height;
   if (TTF_SizeUTF8(font->sdlFont, text, &width, &height)) {
     rb_raise_sdl_ttf_error();
   }
@@ -259,6 +179,15 @@ Font_size(VALUE self)
   const Font* font;
   Data_Get_Struct(self, Font, font);
   return INT2NUM(font->size);
+}
+
+static VALUE
+Font_size_set(VALUE self, VALUE rbSize)
+{
+  Font* font;
+  Data_Get_Struct(self, Font, font);
+  font->size = NUM2INT(rbSize);
+  return Qnil;
 }
 
 #define ADD_INFO(currentInfo, _rbFontNameSymbol, \
@@ -355,7 +284,7 @@ strb_InitializeSdlFont(void)
             int ttcIndex = 0;
             for (int i = 0; i < arrLength; i++) {
               volatile VALUE rbFontName = rb_ary_entry(rbArr, i);
-              rb_funcall(rbFontName, rb_intern("strip!"), 0);
+              rb_funcall(rbFontName, ID_strip_bang, 0);
               if (0 < RSTRING_LEN(rbFontName)) {
                 volatile VALUE rbFontNameSymbol = rb_str_intern(rbFontName);
                 volatile VALUE rbFileNameSymbol = rb_str_intern(rbFileName);
@@ -376,14 +305,14 @@ strb_InitializeSdlFont(void)
     }
     RegCloseKey(hKey);
   } else {
-    rb_raise(strb_GetStarRubyErrorClass(),
+    rb_raise(rb_eStarRubyError,
              "Win32API error: %d", (int)GetLastError());
   }
   TCHAR szWindowsFontDirPath[MAX_PATH + 1];
   if (FAILED(SHGetFolderPath(NULL, CSIDL_FONTS, NULL,
                              SHGFP_TYPE_CURRENT,
                              szWindowsFontDirPath))) {
-    rb_raise(strb_GetStarRubyErrorClass(),
+    rb_raise(rb_eStarRubyError,
              "Win32API error: %d", (int)GetLastError());
   }
   int length =
@@ -404,23 +333,21 @@ strb_InitializeSdlFont(void)
 VALUE
 strb_InitializeFont(VALUE rb_mStarRuby)
 {
-  VALUE rb_cFont = rb_define_class_under(rb_mStarRuby, "Font", rb_cObject);
-  rb_define_singleton_method(rb_cFont, "exist?", Font_s_exist, 1);
-  rb_define_singleton_method(rb_cFont, "new",    Font_s_new,   -1);
+  rb_cFont = rb_define_class_under(rb_mStarRuby, "Font", rb_cObject);
+  rb_define_singleton_method(rb_cFont, "exist?", Font_s_exist, 1);;
   rb_define_alloc_func(rb_cFont, Font_alloc);
-  rb_define_private_method(rb_cFont, "initialize", Font_initialize, 5);
-  rb_define_method(rb_cFont, "bold?",     Font_bold,     0);
-  rb_define_method(rb_cFont, "get_size",  Font_get_size, 1);
-  rb_define_method(rb_cFont, "italic?",   Font_italic,   0);
-  rb_define_method(rb_cFont, "name",      Font_name,     0);
-  rb_define_method(rb_cFont, "size",      Font_size,     0);
+  rb_define_private_method(rb_cFont, "initialize", Font_initialize, -1);
+  rb_define_method(rb_cFont, "bold",       Font_bold,          0);
+  rb_define_method(rb_cFont, "bold=",      Font_bold_set,      1);
+  rb_define_method(rb_cFont, "italic",     Font_italic,        0);
+  rb_define_method(rb_cFont, "italic=",    Font_italic_set,    1);
+  rb_define_method(rb_cFont, "underline",  Font_underline,     0);
+  rb_define_method(rb_cFont, "underline=", Font_underline_set, 1);
+  rb_define_method(rb_cFont, "name",       Font_name,          0);
+  //rb_define_method(rb_cFont, "name=",     Font_name_set,       1);
+  rb_define_method(rb_cFont, "size",       Font_size,          0);
+  rb_define_method(rb_cFont, "size=",    Font_size_set,   1);
 
-  symbol_bold      = ID2SYM(rb_intern("bold"));
-  symbol_italic    = ID2SYM(rb_intern("italic"));
-  symbol_ttc_index = ID2SYM(rb_intern("ttc_index"));
-
-  rbFontCache = rb_hash_new();
-  rb_gc_register_address(&rbFontCache);
-
+  rb_define_method(rb_cFont, "get_size",   Font_get_size,      1);
   return rb_cFont;
 }

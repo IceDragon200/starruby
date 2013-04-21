@@ -109,7 +109,14 @@ static int
 AssignRenderingTextureOptions(st_data_t key, st_data_t val,
                               RenderingTextureOptions* options)
 {
-  if (key == symbol_src_x) {
+  if (key == symbol_src_rect) {
+    Rect* rect;
+    Data_Get_Struct(val, Rect, rect);
+    options->srcX      = rect->x;
+    options->srcY      = rect->y;
+    options->srcWidth  = rect->width;
+    options->srcHeight = rect->height;
+  } else if (key == symbol_src_x) {
     options->srcX = NUM2INT(val);
   } else if (key == symbol_src_y) {
     options->srcY = NUM2INT(val);
@@ -117,6 +124,11 @@ AssignRenderingTextureOptions(st_data_t key, st_data_t val,
     options->srcWidth = NUM2INT(val);
   } else if (key == symbol_src_height) {
     options->srcHeight = NUM2INT(val);
+  } else if (key == symbol_scale || key == symbol_scale_vec2) {
+    Vector2F* vec2;
+    Data_Get_Struct(val, Vector2F, vec2);
+    options->scaleX = vec2->x;
+    options->scaleY = vec2->y;
   } else if (key == symbol_scale_x) {
     options->scaleX = NUM2DBL(val);
   } else if (key == symbol_scale_y) {
@@ -189,13 +201,13 @@ Texture_render_in_perspective(int argc, VALUE* argv, VALUE self)
   if (NIL_P(rbOptions)) {
     rbOptions = rb_hash_new();
   }
-  strb_CheckTexture(rbTexture);
+  strb_CheckObjIsKindOf(rbTexture, rb_cTexture);
   const Texture* srcTexture;
   Data_Get_Struct(rbTexture, Texture, srcTexture);
-  strb_CheckDisposedTexture(srcTexture);
+  strb_TextureCheckDisposed(srcTexture);
   const Texture* dstTexture;
   Data_Get_Struct(self, Texture, dstTexture);
-  strb_CheckDisposedTexture(dstTexture);
+  strb_TextureCheckDisposed(dstTexture);
 
   if (srcTexture == dstTexture) {
     rb_raise(rb_eRuntimeError, "can't render self in perspective");
@@ -313,7 +325,7 @@ Texture_render_line(VALUE self,
   const int y2 = NUM2INT(rbY2);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   Color color;
   strb_GetColorFromRubyValue(&color, rbColor);
@@ -363,7 +375,7 @@ Texture_render_pixel(VALUE self, VALUE rbX, VALUE rbY, VALUE rbColor)
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   const int x = NUM2INT(rbX);
   const int y = NUM2INT(rbY);
@@ -384,7 +396,7 @@ Texture_render_rect(VALUE self, VALUE rbX, VALUE rbY,
   rb_check_frozen(self);
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
-  strb_CheckDisposedTexture(texture);
+  strb_TextureCheckDisposed(texture);
 
   int rectX = NUM2INT(rbX);
   int rectY = NUM2INT(rbY);

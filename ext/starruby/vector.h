@@ -9,23 +9,23 @@
 
   typedef struct {
     int32_t x, y;
-  } Point2I;
+  } Vector2I;
 
   typedef struct {
     double x, y;
-  } Point2F;
+  } Vector2F;
 
   typedef struct {
     int32_t x, y, z;
-  } Point3I;
+  } Vector3I;
 
   typedef struct {
     double x, y, z;
-  } Point3F;
+  } Vector3F;
 
-  typedef Point2I Vector2I;
-  typedef Point2F Vector2F;
-  typedef Point3I Vector3I;
-  typedef Point3F Vector3F;
+  typedef Vector2I Point2I;
+  typedef Vector2F Point2F;
+  typedef Vector3I Point3I;
+  typedef Vector3F Point3F;
 
 #endif

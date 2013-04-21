@@ -8,9 +8,9 @@ static VALUE Transition_crossfade(VALUE module,
                                   VALUE rbT0, VALUE rbT1, VALUE rbT2,
                                   VALUE rbDelta)
 {
-  strb_CheckTexture(rbT0);
-  strb_CheckTexture(rbT1);
-  strb_CheckTexture(rbT2);
+  strb_CheckObjIsKindOf(rbT0, rb_cTexture);
+  strb_CheckObjIsKindOf(rbT1, rb_cTexture);
+  strb_CheckObjIsKindOf(rbT2, rb_cTexture);
 
   Texture *t0, *t1, *t2;
 
@@ -18,9 +18,9 @@ static VALUE Transition_crossfade(VALUE module,
   Data_Get_Struct(rbT1, Texture, t1);
   Data_Get_Struct(rbT2, Texture, t2);
 
-  strb_CheckDisposedTexture(t0);
-  strb_CheckDisposedTexture(t1);
-  strb_CheckDisposedTexture(t2);
+  strb_TextureCheckDisposed(t0);
+  strb_TextureCheckDisposed(t1);
+  strb_TextureCheckDisposed(t2);
 
   if(!strb_Texture_dimensions_match(t0, t1) ||
      !strb_Texture_dimensions_match(t0, t2))

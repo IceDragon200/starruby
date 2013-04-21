@@ -1,15 +1,6 @@
 #include "starruby.prv.h"
 
-static volatile VALUE rb_cTone = Qundef;
-
-VALUE
-strb_GetToneClass(void)
-{
-  return rb_cTone;
-}
-
-static void Tone_free(Tone*);
-STRUCT_CHECK_TYPE_FUNC(Tone, Tone);
+volatile VALUE rb_cTone = Qundef;
 
 // attr_reader
 static VALUE
@@ -56,6 +47,7 @@ Tone_green(VALUE self)
 static VALUE
 Tone_saturation_set(VALUE self, VALUE rbVal)
 {
+  rb_check_frozen(self);
   Tone *tone;
   Data_Get_Struct(self, Tone, tone);
   tone->saturation = MINMAXU255(FIX2INT(rbVal));
@@ -65,6 +57,7 @@ Tone_saturation_set(VALUE self, VALUE rbVal)
 static VALUE
 Tone_grey_set(VALUE self, VALUE rbVal)
 {
+  rb_check_frozen(self);
   Tone *tone;
   Data_Get_Struct(self, Tone, tone);
   tone->saturation = 255 - MINMAXU255(FIX2INT(rbVal));
@@ -74,6 +67,7 @@ Tone_grey_set(VALUE self, VALUE rbVal)
 static VALUE
 Tone_red_set(VALUE self, VALUE rbVal)
 {
+  rb_check_frozen(self);
   Tone *tone;
   Data_Get_Struct(self, Tone, tone);
   tone->red = MINMAX255(FIX2INT(rbVal));
@@ -83,6 +77,7 @@ Tone_red_set(VALUE self, VALUE rbVal)
 static VALUE
 Tone_green_set(VALUE self, VALUE rbVal)
 {
+  rb_check_frozen(self);
   Tone *tone;
   Data_Get_Struct(self, Tone, tone);
   tone->green = MINMAX255(FIX2INT(rbVal));
@@ -92,6 +87,7 @@ Tone_green_set(VALUE self, VALUE rbVal)
 static VALUE
 Tone_blue_set(VALUE self, VALUE rbVal)
 {
+  rb_check_frozen(self);
   Tone *tone;
   Data_Get_Struct(self, Tone, tone);
   tone->blue = MINMAX255(FIX2INT(rbVal));
@@ -118,6 +114,7 @@ Tone_alloc(VALUE klass)
 static VALUE
 Tone_set(int argc, VALUE *argv, VALUE self)
 {
+  rb_check_frozen(self);
   volatile VALUE rbRed, rbGreen, rbBlue, rbSaturation;
   if(argc == 0) {
     rbRed   = INT2FIX(0);
@@ -128,7 +125,7 @@ Tone_set(int argc, VALUE *argv, VALUE self)
   else if(argc == 1) {
     volatile VALUE rbTone;
     rb_scan_args(argc, argv, "10", &rbTone);
-    strb_CheckTone(rbTone);
+    strb_CheckObjIsKindOf(rbTone, rb_cTone);
 
     Tone *tone;
     Data_Get_Struct(rbTone, Tone, tone);
@@ -244,15 +241,13 @@ Tone_to_a2(VALUE self)
 static VALUE
 Tone_dump(VALUE self, VALUE rbDepth)
 {
-  return rb_funcall(Tone_to_a(self),
-    rb_intern("pack"), 1, rb_str_new2("D4\0"));
+  return rb_funcall(Tone_to_a(self), ID_pack, 1, rb_str_new2("D4\0"));
 }
 
 static VALUE
 Tone_load(VALUE klass, VALUE rbDStr)
 {
-  volatile VALUE rbUAry = rb_funcall(
-    rbDStr, rb_intern("unpack"), 1, rb_str_new2("D4\0"));
+  volatile VALUE rbUAry = rb_funcall(rbDStr, ID_unpack, 1, rb_str_new2("D4\0"));
 
   VALUE rbArgv[4] = {
     rb_ary_entry(rbUAry, 0), rb_ary_entry(rbUAry, 1), // red, green

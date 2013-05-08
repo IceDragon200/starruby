@@ -2,6 +2,7 @@
   StarRuby Table (old RGX base)
   */
 #include "starruby.prv.h"
+#include "vector.h"
 
 volatile VALUE rb_cTable = Qundef;
 
@@ -9,40 +10,41 @@ typedef Short TableData_t;
 typedef Short* TableDataPtr;
 
 typedef struct {
-  Bignum dim, xsize, ysize, zsize, size;
+  Byte dim;
+  Bignum xsize, ysize, zsize, size;
   TableDataPtr data;
-} RGXTable;
+} Table;
 
 #define GET_TABLE(self, ptr)        \
-  RGXTable *ptr; Data_Get_Struct(self, RGXTable, ptr)
+  Table *ptr; Data_Get_Struct(self, Table, ptr)
 #define XYZ_TO_INDEX(x, y, z, xsize, ysize) \
   (x + (y * xsize) + (z * xsize * ysize))
 
-#define STRICT_TABLE false
+#define STRICT_TABLE False
 
 #if STRICT_TABLE
-  #define UNSTRICT_PROTECT
-#endif
-
-#if !STRICT_TABLE
-  #define UNSTRICT_PROTECT \
-    if(x >= xsize || y >= ysize || z >= zsize || index >= size) { \
+  #define UNSTRICT_PROTECT(x, y, z)
+#else
+  #define UNSTRICT_PROTECT(x, y, z) \
+    if((x) >= xsize || (y) >= ysize || (z) >= zsize || index >= size) { \
       return INT2FIX(0);                                          \
     }
 #endif
 
+#define TABLE_CLAMP_VALUE(value) (MAX(MIN((value), 0x7FFF), -0x7FFF))
+
 static void
-Table_free(RGXTable* table)
+Table_free(Table* table)
 {
   free(table->data);
-  table->data = NULL;
+  table->data = Null;
   free(table);
 }
 
 static VALUE
 Table_alloc(VALUE klass)
 {
-  RGXTable* table = ALLOC(RGXTable);
+  Table* table = ALLOC(Table);
   table->dim         = 0;
   table->xsize       = 1;
   table->ysize       = 1;
@@ -110,86 +112,120 @@ tb_check_index(int x, int y, int z, int xsize, int ysize, int zsize)
   tb_check_size(xsize, ysize, zsize);
 
 
+struct Pos3 {
+  Integer x, y, z;
+};
+
+static Void Table_Pos3Solver(Table* source_tb,
+                             Integer argc, VALUE rbX, VALUE rbY, VALUE rbZ,
+                             struct Pos3* pos)
+{
+  if (argc == 1) {
+    if (rb_obj_is_kind_of(rbX, rb_cVector)) {
+      /* 1D Table */
+      if (source_tb->dim == 1) {
+        rb_raise(rb_eTypeError, "cannot use %s with 1D %s",
+                 rb_obj_classname(rbX), rb_class2name(rb_cTable));
+      /* 2D Table */
+      } else if (source_tb->dim == 2) {
+        //strb_CheckObjIsKindOf(rbX, rb_cVector2);
+        Vector2 vec2;
+        strb_RubyToVector2(rbX, &vec2);
+        pos->x = toInteger(vec2.x);
+        pos->y = toInteger(vec2.y);
+        pos->z = 0;
+      /* 3D Table */
+      } else if (source_tb->dim == 3) {
+        Vector3 vec3;
+        strb_RubyToVector3(rbX, &vec3);
+        pos->x = toInteger(vec3.x);
+        pos->y = toInteger(vec3.y);
+        pos->z = toInteger(vec3.z);
+      }
+    /* Assuming that rbX is a Numeric type */
+    } else if (source_tb->dim == 1) {
+      pos->x = NUM2INT(rbX);
+      pos->y = 0;
+      pos->z = 0;
+    } else {
+      rb_raise(rb_eArgError, "expected 1 or %d args but recieved %d",
+               source_tb->dim, argc);
+    }
+  /* 2D Table */
+  } else if (argc == 2 && source_tb->dim == 2) {
+    pos->x = NUM2INT(rbX);
+    pos->y = NUM2INT(rbY);
+    pos->z = 0;
+  /* 3D Table */
+  } else if (argc == 3 && source_tb->dim == 3) {
+    pos->x = NUM2INT(rbX);
+    pos->y = NUM2INT(rbY);
+    pos->z = NUM2INT(rbZ);
+  /* FAIL */
+  } else {
+    rb_raise(rb_eArgError, "expected 1 or %d args but recieved %d",
+             source_tb->dim, argc);
+  }
+}
+
 // Get
 static VALUE
-rb_tb_get(int argc, VALUE* argv, VALUE self)
+Table_get(int argc, VALUE* argv, VALUE self)
 {
-  GET_TABLE(self, source_tb);
+  Integer index;
+  Integer xsize, ysize, zsize, size;
+  struct Pos3 pos3 = {0, 0, 0};
+  Table* source_tb;
+  VALUE rbX, rbY, rbZ;
 
-  volatile VALUE rbX, rbY, rbZ;
-  rb_scan_args(argc, argv, "12",
-               &rbX, &rbY, &rbZ);
+  Data_Get_Struct(self, Table, source_tb);
+  rb_scan_args(argc, argv, "12", &rbX, &rbY, &rbZ);
+  Table_Pos3Solver(source_tb, argc, rbX, rbY, rbZ, &(pos3));
 
-  if(argc == 1)
-  {
-    rbY = INT2FIX(0);
-    rbZ = INT2FIX(0);
-  }
-  else if(argc == 2)
-  {
-    rbZ = INT2FIX(0);
-  }
-  const int x = FIX2INT(rbX);
-  const int y = FIX2INT(rbY);
-  const int z = FIX2INT(rbZ);
+  xsize = source_tb->xsize;
+  ysize = source_tb->ysize;
+  zsize = source_tb->zsize;
+  size  = source_tb->size;
 
-  const int xsize = source_tb->xsize;
-  const int ysize = source_tb->ysize;
-  const int zsize = source_tb->zsize;
-  const int size = source_tb->size;
-
-  tb_check_index(x, y, z, xsize, ysize, zsize);
-
-  int index = XYZ_TO_INDEX(x, y, z, xsize, ysize);
-
-  UNSTRICT_PROTECT;
-
+  tb_check_index(pos3.x, pos3.y, pos3.z, xsize, ysize, zsize);
+  index = XYZ_TO_INDEX(pos3.x, pos3.y, pos3.z, xsize, ysize);
+  UNSTRICT_PROTECT(pos3.x, pos3.y, pos3.z);
   return INT2FIX(source_tb->data[index]);
 }
 
-#define TABLE_CLAMP_VALUE(value) (MAX(MIN((value), 0x7FFF), -0x7FFF))
-
 // Set
 static VALUE
-rb_tb_set(int argc, VALUE* argv, VALUE self)
+Table_set(int argc, VALUE* argv, VALUE self)
 {
-  GET_TABLE(self, source_tb);
+  Integer index, value;
+  Integer xsize, ysize, zsize, size;
+  struct Pos3 pos3 = {0, 0, 0};
+  Table* source_tb;
+  VALUE rbX, rbY, rbZ, rbValue;
 
-  volatile VALUE rbX, rbY, rbZ, rbValue;
-
-  rb_scan_args(argc, argv, "22",
-               &rbX, &rbY, &rbZ, &rbValue);
+  Data_Get_Struct(self, Table, source_tb);
+  rb_scan_args(argc, argv, "22", &rbX, &rbY, &rbZ, &rbValue);
+  Table_Pos3Solver(source_tb, argc - 1, rbX, rbY, rbZ, &(pos3));
 
   if(argc == 2)
   {
     rbValue = rbY;
-    rbY = INT2FIX(0);
-    rbZ = INT2FIX(0);
   }
   else if(argc == 3)
   {
     rbValue = rbZ;
-    rbZ = INT2FIX(0);
   }
-  const int x = FIX2INT(rbX);
-  const int y = FIX2INT(rbY);
-  const int z = FIX2INT(rbZ);
-  const int value = FIX2INT(rbValue);
+  value = FIX2INT(rbValue);
+  xsize = source_tb->xsize;
+  ysize = source_tb->ysize;
+  zsize = source_tb->zsize;
+  size = source_tb->size;
 
-  const int xsize = source_tb->xsize;
-  const int ysize = source_tb->ysize;
-  const int zsize = source_tb->zsize;
-  const int size = source_tb->size;
-
-  tb_check_index(x, y, z, xsize, ysize, zsize);
-
-  int index = XYZ_TO_INDEX(x, y, z, xsize, ysize);
-
-  UNSTRICT_PROTECT;
-
+  tb_check_index(pos3.x, pos3.y, pos3.z, xsize, ysize, zsize);
+  index = XYZ_TO_INDEX(pos3.x, pos3.y, pos3.z, xsize, ysize);
+  UNSTRICT_PROTECT(pos3.x, pos3.y, pos3.z);
   source_tb->data[index] = TABLE_CLAMP_VALUE(value);
-
-  return INT2FIX(source_tb->data[index]);
+  return Qnil;
 }
 
 // Ruby Interface
@@ -246,7 +282,7 @@ static VALUE rb_tb_dim(VALUE self)
   return INT2FIX(source_tb->dim);
 }
 
-// nsize
+// Nsize
 static VALUE rb_tb_xsize(VALUE self)
 {
   GET_TABLE(self, source_tb);
@@ -326,8 +362,8 @@ rb_tb_to_a(VALUE self)
 static VALUE
 rb_tb_clear(VALUE self)
 {
-  RGXTable* table;
-  Data_Get_Struct(self, RGXTable, table);
+  Table* table;
+  Data_Get_Struct(self, Table, table);
   MEMZERO(table->data, TableData_t, table->size);
 
   return self;
@@ -423,8 +459,8 @@ void strb_InitializeTable(VALUE rb_mStarRuby)
   rb_define_method(rb_cTable, "ysize", rb_tb_ysize, 0);
   rb_define_method(rb_cTable, "zsize", rb_tb_zsize, 0);
 
-  rb_define_method(rb_cTable, "[]", rb_tb_get, -1);
-  rb_define_method(rb_cTable, "[]=", rb_tb_set, -1);
+  rb_define_method(rb_cTable, "[]", Table_get, -1);
+  rb_define_method(rb_cTable, "[]=", Table_set, -1);
   rb_define_method(rb_cTable, "resize", rb_tb_resize, -1);
 
   // Extended

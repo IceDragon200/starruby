@@ -2,8 +2,6 @@
 
 volatile VALUE rb_cColor = Qundef;
 
-#define NULL_COLOR (Color){ 0, 0, 0, 0 }
-
 static Void Color_free(Color* color_ptr)
 {
   free(color_ptr);
@@ -30,7 +28,7 @@ Void strb_CopyColorTo(Color* src_color, Color* dst_color)
   ((Pixel*)dst_color)->value = ((Pixel*)src_color)->value;
 }
 
-Color* strb_RubyColorPtr(VALUE rbColor)
+inline Color* strb_RubyColorPtr(VALUE rbColor)
 {
   Color* color_ptr;
   Data_Get_Struct(rbColor, Color, color_ptr);
@@ -49,39 +47,36 @@ VALUE strb_ColorToRuby(Color color)
   return strb_RubyWrapColorPtr(rb_cColor, wrap_color);
 }
 
-Color strb_RubyToColor(VALUE rbObj)
+Void strb_RubyToColor(VALUE rbObj, Color* color)
 {
   switch (TYPE(rbObj)) {
     case T_DATA: {
-      if (rb_obj_is_kind_of(rbObj, rb_cColor)) {
-        return *strb_RubyColorPtr(rbObj);
-      }
+      strb_CheckObjIsKindOf(rbObj, rb_cColor);
+      *color = *strb_RubyColorPtr(rbObj);
+      break;
     }
     case T_ARRAY: {
       if (hrbCheckArraySize(rbObj, ==, 3)) {
-        Color color;
-        color.red   = hrbArrayEntryAsByte(rbObj, 0);
-        color.green = hrbArrayEntryAsByte(rbObj, 1);
-        color.blue  = hrbArrayEntryAsByte(rbObj, 2);
-        color.alpha = 0xFF;
-        return color;
+        color->red   = hrbArrayEntryAsByte(rbObj, 0);
+        color->green = hrbArrayEntryAsByte(rbObj, 1);
+        color->blue  = hrbArrayEntryAsByte(rbObj, 2);
+        color->alpha = 0xFF;
       } else if (hrbCheckArraySize(rbObj, ==, 4)) {
-        Color color;
-        color.red   = hrbArrayEntryAsByte(rbObj, 0);
-        color.green = hrbArrayEntryAsByte(rbObj, 1);
-        color.blue  = hrbArrayEntryAsByte(rbObj, 2);
-        color.alpha = hrbArrayEntryAsByte(rbObj, 3);
-        return color;
+        color->red   = hrbArrayEntryAsByte(rbObj, 0);
+        color->green = hrbArrayEntryAsByte(rbObj, 1);
+        color->blue  = hrbArrayEntryAsByte(rbObj, 2);
+        color->alpha = hrbArrayEntryAsByte(rbObj, 3);
       } else {
-        rb_raise(rb_eArgError, "Expected Array of size 3 or 4");
+        rb_raise(rb_eArgError, "Expected %s of size 3 or 4",
+                 rb_class2name(rb_cArray));
       }
+      break;
     }
     default: {
-      rb_raise(rb_eTypeError, "Can't convert %s into StarRuby::Color",
-               rb_obj_classname(rbObj));
+      rb_raise(rb_eTypeError, "Can't convert %s into %s",
+               rb_obj_classname(rbObj), rb_class2name(rb_cColor));
     }
   }
-  return NULL_COLOR;
 }
 
 Boolean strb_ObjIsColor(VALUE rbObj)
@@ -91,8 +86,7 @@ Boolean strb_ObjIsColor(VALUE rbObj)
 
 inline Void strb_GetColorFromRubyValue(Color* color, VALUE rbColor)
 {
-  Color src_color = strb_RubyToColor(rbColor);
-  ((Pixel*)color)->value = ((Pixel)src_color).value;
+  strb_RubyToColor(rbColor, color);
 }
 
 // attr_reader
@@ -181,7 +175,8 @@ Color_set(int argc, VALUE *argv, VALUE self)
     rbGreen = v255;
     rbAlpha = v255;
   } else if (argc == 1) {
-    Color color = strb_RubyToColor(argv[0]);
+    Color color;
+    strb_RubyToColor(argv[0], &(color));
     rbRed   = INT2FIX(color.red);
     rbGreen = INT2FIX(color.green);
     rbBlue  = INT2FIX(color.blue);
@@ -226,7 +221,7 @@ Color_equal(VALUE self, VALUE rbOther)
   Color color1, color2;
   strb_GetColorFromRubyValue(&color1, self);
   strb_GetColorFromRubyValue(&color2, rbOther);
-  return CBOOL2RUBY(((Pixel)color1).value == ((Pixel)color2).value);
+  return CBOOL2RVAL(((Pixel)color1).value == ((Pixel)color2).value);
 }
 
 static VALUE
@@ -286,16 +281,29 @@ Color_load(VALUE klass, VALUE rbDStr)
   return rb_class_new_instance(4, argv, klass);
 }
 
+static VALUE Color_s_cast(VALUE klass, VALUE rbObj)
+{
+  Color* color;
+  VALUE rbColor;
+  rbColor = rb_class_new_instance(0, (VALUE[]){}, klass);
+  Data_Get_Struct(rbColor, Color, color);
+  strb_RubyToColor(rbObj, color);
+  return rbColor;
+}
+
 VALUE
 strb_InitializeColor(VALUE rb_mStarRuby)
 {
   rb_cColor = rb_define_class_under(rb_mStarRuby, "Color", rb_cObject);
   rb_define_alloc_func(rb_cColor, Color_alloc);
-  rb_define_private_method(rb_cColor, "initialize", Color_set, -1);
-  rb_define_private_method(rb_cColor, "initialize_copy", Color_initialize_copy, 1);
 
   rb_define_singleton_method(rb_cColor, "_load", Color_load, 1);
   rb_define_method(rb_cColor, "_dump", Color_dump, 1);
+  rb_define_singleton_method(rb_cColor, "cast", Color_s_cast, 1);
+  rb_define_singleton_method(rb_cColor, "[]", Color_s_cast, 1);
+
+  rb_define_private_method(rb_cColor, "initialize", Color_set, -1);
+  rb_define_private_method(rb_cColor, "initialize_copy", Color_initialize_copy, 1);
 
   rb_define_method(rb_cColor, "set", Color_set, -1);
 

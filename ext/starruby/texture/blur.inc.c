@@ -12,16 +12,21 @@
 static VALUE
 Texture_blur(VALUE self)
 {
-  rb_check_frozen(self);
-  Texture* texture, *src_texture;
+  Texture* texture;
+  Texture* src_texture;
+  Pixel* src_pixels;
+  Pixel* dst_pixels;
+  VALUE src_rbTexture;
   Data_Get_Struct(self, Texture, texture);
   strb_TextureCheckDisposed(texture);
 
-  VALUE src_rbTexture = rb_obj_dup(self);
+  src_rbTexture = rb_obj_dup(self);
   Data_Get_Struct(src_rbTexture, Texture, src_texture);
 
-  Pixel* src_pixels = src_texture->pixels;
-  Pixel* pixels = texture->pixels;
+  src_pixels = src_texture->pixels;
+  dst_pixels = texture->pixels;
+
+  rb_check_frozen(self);
 
   for(int y = 1; y < texture->height; y++) {
     for(int x = 1; x < texture->width; x++) {
@@ -36,7 +41,7 @@ Texture_blur(VALUE self)
 
       NORMALIZE_COLORS3(rscol, cpx.color, hpx.color, vpx.color);
 
-      pixels[cpx_index].color = rscol;
+      dst_pixels[cpx_index].color = rscol;
     }
   }
 
@@ -53,7 +58,7 @@ Texture_blur(VALUE self)
 
       NORMALIZE_COLORS3(rscol, cpx.color, hpx.color, vpx.color);
 
-      pixels[cpx_index].color = rscol;
+      dst_pixels[cpx_index].color = rscol;
     }
   }
 

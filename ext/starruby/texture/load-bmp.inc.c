@@ -1,3 +1,4 @@
+/*
 typedef enum {
   BI_RGB,
   BI_RLE8,
@@ -39,4 +40,5 @@ static VALUE Texture_s_load_bmp(VALUE self, VALUE rbFilename)
 {
 
 }
-//#define STARRUBY_TEXTURE_LOAD_BMP
+*/
+//#define STRB_TEXTURE_LOAD_BMP

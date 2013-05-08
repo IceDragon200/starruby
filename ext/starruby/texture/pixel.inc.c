@@ -31,7 +31,7 @@ Texture_aset(VALUE self, VALUE rbX, VALUE rbY, VALUE rbColor)
     return Qnil;
   }
   Color color;
-  strb_GetColorFromRubyValue(&color, rbColor);
+  strb_RubyToColor(rbColor, &color);
   texture->pixels[x + y * texture->width].color = color;
   return rbColor;
 }

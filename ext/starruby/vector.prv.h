@@ -41,11 +41,10 @@ namespace ## _set(int argc, VALUE* argv, VALUE self) \
   else if(argc == 1) \
   { \
     rb_scan_args(argc, argv, "10", &rbObj); \
-    strb_CheckObjIsKindOf(rbObj, rb_c ## strct); \
-    strct *vec; \
-    Data_Get_Struct(rbObj, strct, vec); \
-    rbX = reader_conv(vec->x); \
-    rbY = reader_conv(vec->y); \
+    strct vec; \
+    strb_RubyToVector2(rbObj, &vec); \
+    rbX = reader_conv(vec.x); \
+    rbY = reader_conv(vec.y); \
   } \
   else \
   { \
@@ -75,12 +74,11 @@ namespace ## _set(int argc, VALUE* argv, VALUE self) \
   else if(argc == 1) \
   { \
     rb_scan_args(argc, argv, "10", &rbObj); \
-    strb_CheckObjIsKindOf(rbObj, rb_c ## strct); \
-    strct *vec; \
-    Data_Get_Struct(rbObj, strct, vec); \
-    rbX = reader_conv(vec->x); \
-    rbY = reader_conv(vec->y); \
-    rbZ = reader_conv(vec->z); \
+    strct vec; \
+    strb_RubyToVector3(rbObj, &vec); \
+    rbX = reader_conv(vec.x); \
+    rbY = reader_conv(vec.y); \
+    rbZ = reader_conv(vec.z); \
   } \
   else \
   { \
@@ -103,53 +101,34 @@ namespace ## _set(int argc, VALUE* argv, VALUE self) \
   }
 
 #define VECTOR_MATH_FUNC2(namespace, strct, word, symbol, reader_conv, writer_conv) \
-  static VALUE \
+  static VALUE                                             \
   namespace ## _ ## word ## _bang(VALUE self, VALUE rbVal) \
-  { \
-    rb_check_frozen(self); \
-    strct *vector; \
-    Data_Get_Struct(self, strct, vector); \
-    if (NUMERIC_P(rbVal)) \
-    { \
-      vector->x symbol ## = writer_conv(rbVal); \
-      vector->y symbol ## = writer_conv(rbVal); \
-    } \
-    else \
-    { \
-      strct *vec2; \
-      strb_CheckObjIsKindOf(rbVal, rb_c ## strct); \
-      Data_Get_Struct(rbVal, strct, vec2); \
-      vector->x symbol ## = vec2->x; \
-      vector->y symbol ## = vec2->y; \
-    } \
-    return self; \
-  } \
+  {                                                        \
+    rb_check_frozen(self);                                 \
+    strct *vector;                                         \
+    strct src_vector;                                      \
+    strb_RubyToVector2(rbVal, &src_vector);                \
+    Data_Get_Struct(self, strct, vector);                  \
+    vector->x symbol ## = src_vector.x;                    \
+    vector->y symbol ## = src_vector.y;                    \
+    return self;                                           \
+  }                                                        \
   VECTOR_BANG_FUNC(namespace, word);
 
 #define VECTOR_MATH_FUNC3(namespace, strct, word, symbol, reader_conv, writer_conv) \
-  static VALUE \
+  static VALUE                                             \
   namespace ## _ ## word ## _bang(VALUE self, VALUE rbVal) \
-  { \
-    rb_check_frozen(self); \
-    strct *vector; \
-    Data_Get_Struct(self, strct, vector); \
-    if (NUMERIC_P(rbVal)) \
-    { \
-      vector->x symbol ## = writer_conv(rbVal); \
-      vector->y symbol ## = writer_conv(rbVal); \
-      vector->z symbol ## = writer_conv(rbVal); \
-    } \
-    else \
-    { \
-      strct *vec2; \
-      strb_CheckObjIsKindOf(rbVal, rb_c ## strct); \
-      Data_Get_Struct(rbVal, strct, vec2); \
-      vector->x symbol ## = vec2->x; \
-      vector->y symbol ## = vec2->y; \
-      vector->z symbol ## = vec2->y; \
-    } \
-    return self; \
-  } \
+  {                                                        \
+    rb_check_frozen(self);                                 \
+    strct *vector;                                         \
+    strct src_vector;                                      \
+    strb_RubyToVector3(rbVal, &src_vector);                \
+    Data_Get_Struct(self, strct, vector);                  \
+    vector->x symbol ## = src_vector.x;                    \
+    vector->y symbol ## = src_vector.y;                    \
+    vector->z symbol ## = src_vector.z;                    \
+    return self;                                           \
+  }                                                        \
   VECTOR_BANG_FUNC(namespace, word);
 
 #define VECTOR_MATH_FUNCS2(namespace, strct, reader_conv, writer_conv) \
@@ -189,30 +168,30 @@ namespace ## _set(int argc, VALUE* argv, VALUE self) \
     return ary; \
   }
 
-#define VECTOR_TO_S2(namespace, strct, writer_conv) \
-  static VALUE \
-  namespace ## _to_s(VALUE self) \
-  { \
-    strct *obj; \
-    Data_Get_Struct(self, strct, obj); \
-    char str[256]; \
-    snprintf(str, sizeof(str), \
+#define VECTOR_TO_S2(namespace, strct, writer_conv)     \
+  static VALUE                                          \
+  namespace ## _to_s(VALUE self)                        \
+  {                                                     \
+    strct *obj;                                         \
+    Data_Get_Struct(self, strct, obj);                  \
+    char str[256];                                      \
+    snprintf(str, sizeof(str),                          \
             "#<%s x=%f, y=%f>", rb_obj_classname(self), \
-            toDouble(obj->x), toDouble(obj->y)); \
-    return rb_str_new2(str); \
+            toDouble(obj->x), toDouble(obj->y));        \
+    return rb_str_new2(str);                            \
   }
 
-#define VECTOR_TO_S3(namespace, strct, writer_conv) \
-  static VALUE \
-  namespace ## _to_s(VALUE self) \
-  { \
-    strct *obj; \
-    Data_Get_Struct(self, strct, obj); \
-    char str[256]; \
-    snprintf(str, sizeof(str), \
-            "#<%s x=%f, y=%f z=%f>", rb_obj_classname(self), \
+#define VECTOR_TO_S3(namespace, strct, writer_conv)                \
+  static VALUE                                                     \
+  namespace ## _to_s(VALUE self)                                   \
+  {                                                                \
+    strct *obj;                                                    \
+    Data_Get_Struct(self, strct, obj);                             \
+    char str[256];                                                 \
+    snprintf(str, sizeof(str),                                     \
+            "#<%s x=%f, y=%f z=%f>", rb_obj_classname(self),       \
             toDouble(obj->x), toDouble(obj->y), toDouble(obj->z)); \
-    return rb_str_new2(str); \
+    return rb_str_new2(str);                                       \
   }
 
 #define VECTOR_DUMP(namespace, strct) \

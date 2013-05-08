@@ -1,7 +1,5 @@
 #include "starruby.h"
 
-//#define STRB_USE_AUDIO
-
 volatile VALUE rb_mStarRuby = Qundef;
 volatile VALUE rb_eStarRubyError = Qundef;
 
@@ -82,32 +80,33 @@ Void Init_starruby(Void)
   g_type_init(); /* for SVG loading */
 #endif
 
+  int sdl_options = 0;
+  sdl_options |= SDL_INIT_JOYSTICK;
+
 #ifdef STRB_USE_AUDIO
-  if (SDL_Init(SDL_INIT_AUDIO)) {
-    rb_raise_sdl_error();
-  }
+  sdl_options |= SDL_INIT_AUDIO;
 #endif
 
-  if (SDL_Init(SDL_INIT_JOYSTICK)) {
+  if (SDL_Init(sdl_options))  {
     rb_raise_sdl_error();
   }
-  /*strb_InitializeSdlAudio();*/
-  strb_InitializeSdlFont();
-  strb_InitializeSdlInput();
 
   volatile VALUE rbVersion = rb_str_new2(STRB_VERSION_S);
   OBJ_FREEZE(rbVersion);
   rb_define_const(rb_mStarRuby, "VERSION", rbVersion);
-#ifndef STRB_USE_AUDIO
-  rb_define_const(rb_mStarRuby, "HAS_AUDIO", Qfalse);
-#elif
-  rb_define_const(rb_mStarRuby, "HAS_AUDIO", Qtrue);
-#endif
   strb_InitializeSymbols(rb_mStarRuby);
 
+  strb_InitializeSdlFont();
+  strb_InitializeSdlInput();
+
 #ifdef STRB_USE_AUDIO
+  strb_InitializeSdlAudio();
+  rb_define_const(rb_mStarRuby, "HAS_AUDIO", Qtrue);
   strb_InitializeAudio(rb_mStarRuby);
+#else
+  rb_define_const(rb_mStarRuby, "HAS_AUDIO", Qfalse);
 #endif
+
   strb_InitializeColor(rb_mStarRuby);
   strb_InitializeFont(rb_mStarRuby);
   strb_InitializeGame(rb_mStarRuby);

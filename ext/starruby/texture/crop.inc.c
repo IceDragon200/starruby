@@ -17,20 +17,17 @@ Texture* strb_TextureCrop(Texture *src_texture, Rect *crop_rect)
 
 static VALUE Texture_crop(Size argc, VALUE *argv, VALUE self)
 {
-  rb_check_frozen(self);
-  VALUE rbTexture;
-  Texture* src_texture;
+  Rect rect;
   Texture* dst_texture;
-  Rect rect = (Rect){ 0, 0, 0, 0 };
+  Texture* src_texture;
+  VALUE rbTexture;
+
+  rb_check_frozen(self);
+
   if (argc == 1) {
     VALUE rbObj = argv[0];
     if (rb_obj_is_kind_of(rbObj, rb_cRect)) {
-      Rect *tmp_rect;
-      Data_Get_Struct(rbObj, Rect, tmp_rect);
-      rect.x      = tmp_rect->x;
-      rect.y      = tmp_rect->y;
-      rect.width  = tmp_rect->width;
-      rect.height = tmp_rect->width;
+      strb_RubyToRect(rbObj, &(rect));
     } else {
       rb_raise(rb_eTypeError, "wrong argument type %s (expected %s)",
                rb_obj_classname(rbObj), rb_class2name(rb_cRect));

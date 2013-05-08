@@ -1,6 +1,6 @@
-#define STARRUBY_TEXTURE_LOAD_PNG
+#define STRB_TEXTURE_LOAD_PNG
 
-static VALUE Texture_s_load(VALUE self, VALUE rbPath)
+static VALUE Texture_s_load_png(VALUE self, VALUE rbPath)
 {
   Check_Type(rbPath, T_STRING);
   VALUE rbFullPath = strb_GetCompletePath(rb_obj_dup(rbPath), False);

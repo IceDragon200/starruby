@@ -2,26 +2,25 @@ static void
 strb_cairo_surface_to_texture_ARGB(cairo_surface_t* cr_surface,
                                    Texture* strb_texture)
 {
-  const uint32_t width  = cairo_image_surface_get_width(cr_surface);
-  const uint32_t height = cairo_image_surface_get_height(cr_surface);
-  const uint64_t length = width * height;
+  const Short width  = cairo_image_surface_get_width(cr_surface);
+  const Short height = cairo_image_surface_get_height(cr_surface);
+  const Integer length = width * height;
 
-  Color32* data = (Color32*)cairo_image_surface_get_data(cr_surface);
+  CairoColor32* data = (CairoColor32*)cairo_image_surface_get_data(cr_surface);
 
-  for(uint64_t i = 0; i < length; i++)
+  for(Integer i = 0; i < length; i++)
   {
-    Color32 px = data[i];
-    strb_texture->pixels[i].color.red   = px.red;
-    strb_texture->pixels[i].color.green = px.green;
-    strb_texture->pixels[i].color.blue  = px.blue;
-    strb_texture->pixels[i].color.alpha = px.alpha;
+    strb_texture->pixels[i].color.red   = data[i].red;
+    strb_texture->pixels[i].color.green = data[i].green;
+    strb_texture->pixels[i].color.blue  = data[i].blue;
+    strb_texture->pixels[i].color.alpha = data[i].alpha;
   }
 }
 
 VALUE strb_TextureFromCairoSurface(cairo_surface_t* cr_surface)
 {
-  const uint32_t width  = cairo_image_surface_get_width(cr_surface);
-  const uint32_t height = cairo_image_surface_get_height(cr_surface);
+  const Short width  = cairo_image_surface_get_width(cr_surface);
+  const Short height = cairo_image_surface_get_height(cr_surface);
   VALUE rbTexture = rb_class_new_instance(2,
                                           (VALUE[]){INT2NUM(width),
                                                     INT2NUM(height)},

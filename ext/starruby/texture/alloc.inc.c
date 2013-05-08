@@ -4,8 +4,17 @@ Texture* strb_TextureAlloc()
   texture->pixels = Null;
   texture->width  = 0;
   texture->height = 0;
+  texture->clip_rect = Qnil;
   texture->binded = False;
   return texture;
+}
+
+static Void
+Texture_mark(Texture* texture)
+{
+  if (texture && !NIL_P(texture->clip_rect)) {
+    rb_gc_mark(texture->clip_rect);
+  }
 }
 
 Void strb_TextureAllocData(Texture* texture)
@@ -41,6 +50,7 @@ Void strb_TextureFree(Texture* texture)
 {
   if (texture) {
     strb_TextureFreePixels(texture);
+    texture->clip_rect = Qnil;
     free(texture);
     texture = Null;
   }
@@ -59,7 +69,7 @@ static VALUE Texture_disposed(VALUE self)
 static VALUE Texture_alloc(VALUE klass)
 {
   Texture* texture = strb_TextureAlloc();
-  return Data_Wrap_Struct(klass, Null, strb_TextureFree, texture);
+  return Data_Wrap_Struct(klass, Texture_mark, strb_TextureFree, texture);
 }
 
 static VALUE Texture_dispose(VALUE self)

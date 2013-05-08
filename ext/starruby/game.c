@@ -1,6 +1,16 @@
 #include "starruby.prv.h"
 #include "game.h"
 
+#if STRB_COLOR_MODE == STRB_COLOR_MODE_RGBA
+#define STRB_GL_COLOR_MODE GL_RGBA
+#elif STRB_COLOR_MODE == STRB_COLOR_MODE_BGRA
+#define STRB_GL_COLOR_MODE GL_BGRA
+#elif STRB_COLOR_MODE == STRB_COLOR_MODE_ARGB
+#define STRB_GL_COLOR_MODE GL_ARGB
+#elif STRB_COLOR_MODE == STRB_COLOR_MODE_ABGR
+#define STRB_GL_COLOR_MODE GL_ABGR
+#endif
+
 volatile VALUE rb_cGame = Qundef;
 
 inline static void
@@ -180,7 +190,7 @@ Game_alloc(VALUE klass)
 static void
 InitializeScreen(Game* game)
 {
-  const int bpp = 32;
+  const Integer bpp = 32;
 
   VALUE rbScreen = game->screen;
   const Texture* screen;
@@ -192,7 +202,9 @@ InitializeScreen(Game* game)
   int screenHeight = 0;
 
   Uint32 options = 0;
+  //options |= SDL_HWSURFACE | SDL_ASYNCBLIT | SDL_DOUBLEBUF | SDL_OPENGL;
   options |= SDL_OPENGL;
+
   if (game->isFullscreen) {
     options |= SDL_HWSURFACE | SDL_FULLSCREEN;
     game->windowScale = 1;
@@ -237,14 +249,25 @@ InitializeScreen(Game* game)
     rb_raise_sdl_error();
   }
 
-  glEnable(GL_BLEND);               // Turn Blending on
-  glDisable(GL_DEPTH_TEST);        // Turn Depth Testing off
-
+  glEnable(GL_BLEND);                // Turn Blending on
+  glEnable(GL_TEXTURE_2D);           //
+  glDisable(GL_DEPTH_TEST);          // Turn Depth Testing off
   glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-  glClearColor(0.0, 0.0, 0.0, 0.0);
+  glMatrixMode(GL_PROJECTION);
+
+  //Clearing the projection matrix...
+  glLoadIdentity();
+
+  //glOrtho(-1, 1, -1, 1, -1, 1);
   glOrtho(0.0, screenWidth, screenHeight, 0.0, -1.0, 1.0);
-  glEnable(GL_TEXTURE_2D);
+  //Now editing the model-view matrix.
+  glMatrixMode(GL_MODELVIEW);
+
+  //Clearing the model-view matrix.
+  glLoadIdentity();
+
+  glClearColor(0.0, 0.0, 0.0, 0.0);
   glGenTextures(1, &game->glScreen);
   glBindTexture(GL_TEXTURE_2D, game->glScreen);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -432,52 +455,26 @@ static VALUE
 Game_update_screen(VALUE self)
 {
   const Game* game;
+  const Texture* texture;
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
-
-  volatile VALUE rbScreen = game->screen;
-  const Texture* texture;
-  Data_Get_Struct(rbScreen, Texture, texture);
+  Data_Get_Struct(game->screen, Texture, texture);
   strb_TextureCheckDisposed(texture);
-
-  const Pixel* src = texture->pixels;
-
-  const uint textureWidth  = texture->width;
-  const uint textureHeight = texture->height;
-
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-               textureWidth, textureHeight,
-               Null, GL_BGRA, GL_UNSIGNED_BYTE, src);
+               texture->width, texture->height,
+               Null, STRB_GL_COLOR_MODE, GL_UNSIGNED_BYTE, texture->pixels);
 
   glClear(GL_COLOR_BUFFER_BIT);
-  glColor3f(1.0, 1.0, 1.0);
   glBegin(GL_QUADS);
   {
-    Integer x1, y1, x2, y2;
-    x1 = 0;
-    y1 = 0;
-    x2 = game->sdlScreen->w;
-    y2 = game->sdlScreen->h;
-
-    volatile Double tv, tu;
-    /*if (game->isFullscreen) {
-      // Keep aspect ratio
-      tv = MIN((Double)game->sdlScreen->w / (Double)textureWidth,
-               (Double)game->sdlScreen->h / (Double)textureHeight);
-      tu = tv;
-    } else { */
-      /* Calculate each sperate zoom level */
-      tu = (Double)textureWidth / (Double)game->sdlScreen->w;
-      tv = (Double)textureHeight / (Double)game->sdlScreen->h;
-    //}
     glTexCoord2f(0.0, 0.0);
-    glVertex3i(x1, y1, 0);
-    glTexCoord2f(tu, 0.0);
-    glVertex3i(x2, y1, 0);
-    glTexCoord2f(tu, tv);
-    glVertex3i(x2, y2, 0);
-    glTexCoord2f(0.0, tv);
-    glVertex3i(x1, y2, 0);
+    glVertex3i(0, 0, 0);
+    glTexCoord2f(1.0, 0.0);
+    glVertex3i(game->sdlScreen->w, 0, 0);
+    glTexCoord2f(1.0, 1.0);
+    glVertex3i(game->sdlScreen->w, game->sdlScreen->h, 0);
+    glTexCoord2f(0.0, 1.0);
+    glVertex3i(0, game->sdlScreen->h, 0);
   }
   glEnd();
 
@@ -519,7 +516,7 @@ Game_wait(VALUE self)
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
   GameTimer* gameTimer = &(game->timer);
-  const unsigned int fps = game->fps;
+  const UInteger fps = game->fps;
   Uint32 now;
   while (true) {
     now = SDL_GetTicks();

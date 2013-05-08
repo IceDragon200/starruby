@@ -185,7 +185,7 @@ Tone_equal(VALUE self, VALUE rbOther)
   Tone *tone1, *tone2;
   Data_Get_Struct(self, Tone, tone1);
   Data_Get_Struct(rbOther, Tone, tone2);
-  return CBOOL2RUBY((tone1->red == tone2->red) &&
+  return CBOOL2RVAL((tone1->red == tone2->red) &&
          (tone1->green == tone2->green) &&
          (tone1->blue == tone2->blue) &&
          (tone1->saturation == tone2->saturation));

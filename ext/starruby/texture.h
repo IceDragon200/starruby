@@ -81,7 +81,7 @@ typedef struct {
 
 inline Boolean strb_Texture_dimensions_match(Texture *t1, Texture *t2)
 {
-  return (t1->width == t2->width || t1->height == t2->height);
+  return (t1->width == t2->width && t1->height == t2->height);
 }
 
 Void strb_TextureRender(const Texture* srcTexture, const Texture* dstTexture,

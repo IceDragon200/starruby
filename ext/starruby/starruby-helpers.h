@@ -10,8 +10,8 @@
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define MINMAX(x, y, z) MIN(MAX((x), (z)), (y))
-#define ABS(x)       (((x) >= 0) ? (x) : (-(x)))
-#define SGN(x)       (((x) >= 0) ? 1 : -1)
+#define ABS(x) (((x) >= 0) ? (x) : (-(x)))
+#define SGN(x) (((x) >= 0) ? 1 : -1)
 
 #define MINMAXU255(x) MINMAX(x, 255, 0)
 #define MINMAX255(x) MINMAX(x, 255, -255)
@@ -19,12 +19,33 @@
 #define CLAMP255 MINMAX255
 #define DIV255(x) ((x) / 255)
 
+/* XNA */
+//#define ALPHA(src, dst, alpha) (DIV255((src) * ((alpha))) + DIV255((dst) * (0xFF - (alpha))))
+/* StarRuby */
 #define ALPHA(src, dst, a) DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a))
 
 #ifndef NUMERIC_P
-  #define NUMERIC_P(_rbObj_) (TYPE(_rbObj_) == T_FIXNUM ? True : (TYPE(_rbObj_) == T_FLOAT ? True : (TYPE(_rbObj_) == T_BIGNUM ? True : False)))
+#define NUMERIC_P(_rbObj_) (TYPE(_rbObj_) == T_FIXNUM ? True : (TYPE(_rbObj_) == T_FLOAT ? True : (TYPE(_rbObj_) == T_BIGNUM ? True : False)))
 #endif
 
+#ifndef CBOOL2RVAL
+#define CBOOL2RVAL(_x_) ((_x_) ? Qtrue : Qfalse)
+#endif
+
+#ifndef DBL2FIX
+#define DBL2FIX(n) INT2FIX((Integer)(n))
+#endif
+
+/* Texture Helpers */
+#define TexturePosInBound(texture_ptr, x, y) ((x) >= 0 && (y) >= 0 && (x) < (texture_ptr)->width && (y) < (texture_ptr)->height)
+#define TextureGetPixel(texture_ptr, x, y) ((texture_ptr)->pixels[(x) + (y) * (texture_ptr)->width])
+#define TextureGetPixelColor(texture_ptr, x, y) TextureGetPixel(texture_ptr, x, y).color
+#define TextureGetPixelValue(texture_ptr, x, y) TextureGetPixel(texture_ptr, x, y).value
+#define TextureSetPixel(texture_ptr, x, y, n) (texture_ptr)->pixels[(x) + (y) * (texture_ptr)->width] = (n)
+#define TextureSetPixelColor(texture_ptr, x, y, n) TextureGetPixel(texture_ptr, x, y).color = (n)
+#define TextureSetPixelValue(texture_ptr, x, y, n) TextureGetPixel(texture_ptr, x, y).value = (n)
+#define TexturePixelRGBMatch(px1, px2) ((px1)->color.red == (px2)->color.red && (px1)->color.green == (px2)->color.green && (px1)->color.blue == (px2)->color.blue)
+#define TexturePixelRGBAMatch(px1, px2) (TexturePixelRGBMatch(px1, px2) && (px1)->color.alpha == (px2)->color.alpha)
 
 #define toLong toBignum
 #define toSLong toSBignum

@@ -125,8 +125,8 @@ AssignRenderingTextureOptions(st_data_t key, st_data_t val,
   } else if (key == symbol_src_height) {
     options->srcHeight = NUM2INT(val);
   } else if (key == symbol_scale || key == symbol_scale_vec2) {
-    Vector2F* vec2;
-    Data_Get_Struct(val, Vector2F, vec2);
+    Vector2* vec2;
+    Data_Get_Struct(val, Vector2, vec2);
     options->scaleX = vec2->x;
     options->scaleY = vec2->y;
   } else if (key == symbol_scale_x) {
@@ -155,6 +155,8 @@ AssignRenderingTextureOptions(st_data_t key, st_data_t val,
       options->blendType = BLEND_TYPE_SUB;
     } else if (val == symbol_mask) {
       options->blendType = BLEND_TYPE_MASK;
+    } else if (val == symbol_multiply) {
+      options->blendType = BLEND_TYPE_MUL;
     }
   } else if (key == symbol_tone) {
     Tone *tone;
@@ -227,23 +229,23 @@ Texture_render_in_perspective(int argc, VALUE* argv, VALUE self)
   const double sinPitch = sin(options.cameraPitch);
   const double cosRoll  = cos(options.cameraRoll);
   const double sinRoll  = sin(options.cameraRoll);
-  const Vector3F screenDX = {
+  const Vector3 screenDX = {
     cosRoll * cosYaw + sinRoll * sinPitch * sinYaw,
     sinRoll * -cosPitch,
     cosRoll * sinYaw - sinRoll * sinPitch * cosYaw,
   };
-  const Vector3F screenDY = {
+  const Vector3 screenDY = {
     -sinRoll * cosYaw + cosRoll * sinPitch * sinYaw,
     cosRoll * -cosPitch,
     -sinRoll * sinYaw - cosRoll * sinPitch * cosYaw,
   };
   const double distance = dstWidth / (2 * (tan(options.viewAngle / 2)));
-  const Point3F intersection = {
+  const Vector3 intersection = {
     distance * (cosPitch * sinYaw),
     distance * sinPitch + options.cameraHeight,
     distance * (-cosPitch * cosYaw),
   };
-  const Point3F screenO = {
+  const Vector3 screenO = {
     intersection.x
     - options.intersectionX * screenDX.x
     - options.intersectionY * screenDY.x,
@@ -257,7 +259,7 @@ Texture_render_in_perspective(int argc, VALUE* argv, VALUE self)
   const int cameraHeight = (int)options.cameraHeight;
   const Pixel* src = srcTexture->pixels;
   Pixel* dst = dstTexture->pixels;
-  Point3F screenP;
+  Vector3 screenP;
   for (int j = 0; j < dstHeight; j++) {
     screenP.x = screenO.x + j * screenDY.x;
     screenP.y = screenO.y + j * screenDY.y;

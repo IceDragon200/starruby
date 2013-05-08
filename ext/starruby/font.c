@@ -63,8 +63,8 @@ static VALUE Font_initialize(Size argc, VALUE* argv, VALUE self)
   SearchFont(rbPath, (VALUE*)&rbRealFilePath, &ttcIndex);
 
   if (NIL_P(rbRealFilePath)) {
-    char* path = StringValueCStr(rbPath);
-    rb_raise(rb_path2class("Errno::ENOENT"), "%s", path);
+    String tmppath = StringValueCStr(rbPath);
+    rb_raise(rb_path2class("Errno::ENOENT"), "%s", tmppath);
     return Qnil;
   }
 
@@ -85,7 +85,7 @@ static VALUE Font_initialize(Size argc, VALUE* argv, VALUE self)
     ttcIndex = 0;
   }
 
-  const char* path   = StringValueCStr(rbRealFilePath);
+  const String path   = StringValueCStr(rbRealFilePath);
   const Integer size = NUM2INT(rbSize);
   Font* font;
   Data_Get_Struct(self, Font, font);

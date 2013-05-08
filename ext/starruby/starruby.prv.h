@@ -62,7 +62,6 @@
 #include "rb_symbols.h"
 #include "starruby-version.h"
 #include "starruby-datatypes.h"
-#include "starruby-convert.h"
 #include "starruby-helpers.h"
 #include "starruby-accessor.h"
 #include "starruby-errors.h"
@@ -88,6 +87,11 @@ void strb_TextureCheckDisposed(const Texture* const);
 bool strb_Texture_is_disposed(const Texture* const);
 
 VALUE strb_CheckObjIsKindOf(VALUE rbObj, VALUE rbKind);
+
+Void strb_RubyToColor(VALUE rbObj, Color* color);
+Void strb_RubyToRect(VALUE rbObj, Rect* rect);
+Void strb_RubyToVector2(VALUE rbObj, Vector2* vec2);
+Void strb_RubyToVector3(VALUE rbObj, Vector3* vec3);
 
 #ifdef DEBUG
   #include <assert.h>

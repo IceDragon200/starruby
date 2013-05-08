@@ -20,9 +20,13 @@ setup_extension('starruby', 'starruby')
 #setup_extension('cairo', 'cairo')
 #setup_extension('chipmunk', 'chipmunk')
 
+task :symboltable do
+  ruby('ext/starruby/_symbols_builder.rb')
+end
+
 # for gem building
 task :extension => [:starruby]#, :cairo, :chipmunk]
 task :compile => :extension
-task :default => [:clean, :extension]
+task :default => [:clean, :symboltable, :extension]
 
 

@@ -76,9 +76,11 @@ Void strb_TextureRotate(Texture *dst_texture, Texture *src_texture,
 
 static VALUE Texture_rotate(VALUE self, VALUE rbRotateType)
 {
-  rb_check_frozen(self);
   VALUE rbSrcTexture = rb_obj_dup(self);
   RotateType rotatetype = (RotateType)FIX2INT(rbRotateType);
+  Texture* src_texture;
+  Texture* dst_texture;
+
   if (rotatetype != ROTATE_NONE &&
       rotatetype != ROTATE_CW &&
       rotatetype != ROTATE_CCW &&
@@ -87,8 +89,8 @@ static VALUE Texture_rotate(VALUE self, VALUE rbRotateType)
       rotatetype != ROTATE_VERT) {
     rb_raise(rb_eArgError, "invalid RotateType %d", rotatetype);
   }
-  Texture* src_texture;
-  Texture* dst_texture;
+
+  rb_check_frozen(self);
   Data_Get_Struct(rbSrcTexture, Texture, src_texture);
   Data_Get_Struct(self, Texture, dst_texture);
   strb_TextureCheckDisposed(src_texture);

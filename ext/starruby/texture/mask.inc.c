@@ -1,3 +1,15 @@
+#define assert_MaskType(mask) \
+  switch (mask) { \
+    case MASK_ALPHA: \
+    case MASK_GRAY:  \
+    case MASK_RED:   \
+    case MASK_GREEN: \
+    case MASK_BLUE:  \
+      break;         \
+    default:         \
+      rb_raise(rb_eArgError, "Invalid MaskType %d", (Integer)mask); \
+  }
+
 Void strb_TextureMask(Texture *dst_texture, Texture *src_texture,
                       Integer dst_x, Integer dst_y, Rect* src_rect,
                       MaskType dst_mask, MaskType src_mask)
@@ -45,7 +57,9 @@ Void strb_TextureMask(Texture *dst_texture, Texture *src_texture,
   const int srcPadding = srcTextureWidth - width;
   const int dstPadding = dstTextureWidth - width;
 
-  Byte mask_value;
+  Byte mask_value = 0;
+  assert_MaskType(src_mask);
+  assert_MaskType(dst_mask);
 
   for(int j = 0; j < height; j++, src += srcPadding, dst += dstPadding) {
     for(int k = 0; k < width; k++, src++, dst++) {

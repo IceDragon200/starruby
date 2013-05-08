@@ -6,7 +6,7 @@
   #define STARRUBY_MATRIX_PRV_H
 
   #include "matrix.h"
-  #include "dimnet.h"
+  #include "strb_dimensionnet.h"
 
   static int32_t MatrixI_entry_dims_to_index2(MatrixI *matrix, ArrayI *argv);
 
@@ -265,12 +265,12 @@
       } \
     } \
     \
-    ArrayI* *ranges = ALLOC_N(ArrayI*, stackSize); \
-    ArrayI *args_array = strb_AllocArrayI(stackSize, 0); \
-    ArrayI *trg_vec = strb_ArrayI_from_ruby(rbTrgCoords); \
-    ArrayI *src_vec_start = strb_ArrayI_from_ruby(rbCoordStart); \
-    ArrayI *src_vec_end = strb_ArrayI_from_ruby(rbCoordEnd); \
-    DimensionNet *dimnet = strb_MakeDimensionNet(src_vec_start, src_vec_end); \
+    ArrayI** ranges       = ALLOC_N(ArrayI*, stackSize);         \
+    ArrayI* args_array    = strb_AllocArrayI(stackSize, 0);      \
+    ArrayI* trg_vec       = strb_ArrayI_from_ruby(rbTrgCoords);  \
+    ArrayI* src_vec_start = strb_ArrayI_from_ruby(rbCoordStart); \
+    ArrayI* src_vec_end   = strb_ArrayI_from_ruby(rbCoordEnd);   \
+    DimensionNet* dimnet  = strb_MakeDimensionNet(src_vec_start, src_vec_end); \
     \
     if(using_matrix && src_matrix != NULL) \
       strb_ModifyInMatrixI(src_matrix, dimnet); \

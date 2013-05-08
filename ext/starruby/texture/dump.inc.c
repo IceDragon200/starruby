@@ -51,5 +51,5 @@ Texture_undump(VALUE self, VALUE rbData, VALUE rbFormat)
       }
     }
   }
-  return self;
+  return Qnil;
 }

@@ -29,11 +29,11 @@ r1.clone
 p (tb1 = StarRuby::Table.new(1)).to_s
 p (tb2 = StarRuby::Table.new(1, 2)).to_s
 p (tb3 = StarRuby::Table.new(1, 2, 3)).to_s
-
+vec = StarRuby::Vector3I.new(0, 1, 1)
+p tb3[vec]
 texture = StarRuby::Texture.new(32, 32)
 texture
 
-__END__
 p vector2f0 = StarRuby::Vector2F.new
 p vector2f1 = StarRuby::Vector2F.new(vector2f0)
 p vector2f2 = StarRuby::Vector2F.new(vector2f1.x, vector2f1.y)
@@ -41,6 +41,8 @@ p vector2f2 = StarRuby::Vector2F.new(vector2f1.x, vector2f1.y)
 p vector3f0 = StarRuby::Vector3F.new
 p vector3f1 = StarRuby::Vector3F.new(vector3f0)
 p vector3f2 = StarRuby::Vector3F.new(vector3f1.x, vector3f1.y, vector3f1.z)
+
+p vector3f2.to_vec3i
 
 vector2f1.x = 14
 p vector2f1.x

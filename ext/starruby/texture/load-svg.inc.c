@@ -1,4 +1,5 @@
-#define STARRUBY_TEXTURE_LOAD_SVG
+#define STRB_TEXTURE_LOAD_SVG
+
 static VALUE
 Texture_s_load_svg(VALUE self, VALUE rbPath, VALUE rbWidth, VALUE rbHeight)
 {
@@ -25,7 +26,7 @@ Texture_s_load_svg(VALUE self, VALUE rbPath, VALUE rbWidth, VALUE rbHeight)
   if(status == CAIRO_STATUS_NULL_POINTER) {
     rb_raise(rb_eStarRubyError, "C ERROR: Null Surface Pointer");
   } else if(status == CAIRO_STATUS_NO_MEMORY) {
-    rb_raise(rb_eStarRubyError, "No Memory");
+    rb_raise(rb_eStarRubyError, "Out Of Memory");
   }
 
   cairo_t* cr_context = cairo_create(cr_surface);

@@ -6,12 +6,12 @@
 
 volatile VALUE rb_cTable = Qundef;
 
-typedef Short TableData_t;
-typedef Short* TableDataPtr;
+typedef int16_t TableData_t;
+typedef int16_t* TableDataPtr;
 
 typedef struct {
-  Byte dim;
-  Bignum xsize, ysize, zsize, size;
+  uint8_t dim;
+  int32_t xsize, ysize, zsize, size;
   TableDataPtr data;
 } Table;
 
@@ -20,7 +20,7 @@ typedef struct {
 #define XYZ_TO_INDEX(x, y, z, xsize, ysize) \
   (x + (y * xsize) + (z * xsize * ysize))
 
-#define STRICT_TABLE False
+#define STRICT_TABLE false
 
 #if STRICT_TABLE
   #define UNSTRICT_PROTECT(x, y, z)
@@ -37,7 +37,7 @@ static void
 Table_free(Table* table)
 {
   free(table->data);
-  table->data = Null;
+  table->data = NULL;
   free(table);
 }
 
@@ -113,11 +113,11 @@ tb_check_index(int x, int y, int z, int xsize, int ysize, int zsize)
 
 
 struct Pos3 {
-  Integer x, y, z;
+  int32_t x, y, z;
 };
 
-static Void Table_Pos3Solver(Table* source_tb,
-                             Integer argc, VALUE rbX, VALUE rbY, VALUE rbZ,
+static void Table_Pos3Solver(Table* source_tb,
+                             int argc, VALUE rbX, VALUE rbY, VALUE rbZ,
                              struct Pos3* pos)
 {
   if (argc == 1) {
@@ -172,8 +172,8 @@ static Void Table_Pos3Solver(Table* source_tb,
 static VALUE
 Table_get(int argc, VALUE* argv, VALUE self)
 {
-  Integer index;
-  Integer xsize, ysize, zsize, size;
+  int index;
+  int xsize, ysize, zsize, size;
   struct Pos3 pos3 = {0, 0, 0};
   Table* source_tb;
   VALUE rbX, rbY, rbZ;
@@ -197,8 +197,8 @@ Table_get(int argc, VALUE* argv, VALUE self)
 static VALUE
 Table_set(int argc, VALUE* argv, VALUE self)
 {
-  Integer index, value;
-  Integer xsize, ysize, zsize, size;
+  int index, value;
+  int xsize, ysize, zsize, size;
   struct Pos3 pos3 = {0, 0, 0};
   Table* source_tb;
   VALUE rbX, rbY, rbZ, rbValue;
@@ -333,7 +333,7 @@ rb_tb_initialize_copy(VALUE self, VALUE rbTable)
   trg_table->zsize = src_table->zsize;
   trg_table->size = src_table->size;
 
-  const Size size = src_table->size;
+  const int size = src_table->size;
 
   trg_table->data = ALLOC_N(TableData_t, size);
   MEMCPY(trg_table->data, src_table->data, TableData_t, size);
@@ -346,13 +346,13 @@ rb_tb_to_a(VALUE self)
 {
   GET_TABLE(self, source_tb);
 
-  Size size = source_tb->size;
+  int32_t size = source_tb->size;
 
   TableDataPtr tb_data = source_tb->data;
 
   VALUE ary = rb_ary_new();
 
-  for(UInteger i = 0; i < size; i++){
+  for(int32_t i = 0; i < size; i++){
     rb_ary_push(ary, INT2FIX(tb_data[i]));
   }
 

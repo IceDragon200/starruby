@@ -28,6 +28,9 @@ Mkrf::Generator.new( 'starruby', ["*.c", "*.cpp"] ) do |g|
   # 6. Add custom Texture loading (Texture#from_data(width, height, byte_format, byte_size, data))
   # 7. Fix SVG loading to support custom width/height
 
+  #g.cflags.gsub!('-fno-fast-math', '-ffast-math')
+  #g.cflags.gsub!('-O3', '-Ofast')
+
   # CONFIG
   use_svg       = false
   use_sdl_mixer = true
@@ -40,7 +43,7 @@ Mkrf::Generator.new( 'starruby', ["*.c", "*.cpp"] ) do |g|
   use_internal_libbmp = false
 
   # Uses clang for fast compilation otherwise gcc is utilized
-  fast_compile  = true
+  fast_compile  = false
 
   # end config
 

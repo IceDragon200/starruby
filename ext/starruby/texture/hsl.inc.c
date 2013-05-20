@@ -1,19 +1,19 @@
 typedef struct {
-  Float hue;
-  Float saturation;
-  Float lightness;
+  float hue;
+  float saturation;
+  float lightness;
 } HSL;
 
 typedef struct {
-  Byte red;
-  Byte green;
-  Byte blue;
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
 } RGB;
 
 /* http://jswidget.com/blog/2011/04/21/rgb-color-model-and-hsl-color-model/ */
-static Byte hslValue(Float n1, Float n2, Float hue)
+static uint8_t hslValue(float n1, float n2, float hue)
 {
-   Float value;
+   float value;
 
    if (hue > 255) { hue -= 255; }
    else if (hue < 0) { hue += 255; }
@@ -27,15 +27,15 @@ static Byte hslValue(Float n1, Float n2, Float hue)
    } else {
       value = n1;
    }
-   return (Byte)(value * 255);
+   return (uint8_t)(value * 255);
 }
 
-static HSL rgb2hsl(Byte red, Byte green, Byte blue)
+static HSL rgb2hsl(uint8_t red, uint8_t green, uint8_t blue)
 {
-   Byte r = red, g = green, b = blue;
-   Float h, s, l;
-   Byte min, max;
-   Byte delta;
+   uint8_t r = red, g = green, b = blue;
+   float h, s, l;
+   uint8_t min, max;
+   uint8_t delta;
 
    if (r > g){
       max = max(r, b);
@@ -76,12 +76,12 @@ static HSL rgb2hsl(Byte red, Byte green, Byte blue)
 
 static RGB hsl2rgb(HSL hsl)
 {
-   Float h = hsl.hue, s = hsl.saturation, l = hsl.lightness;
+   float h = hsl.hue, s = hsl.saturation, l = hsl.lightness;
    if (s == 0) {
       /*  achromatic case  */
       return (RGB){l, l, l};
    } else {
-      Float m1, m2;
+      float m1, m2;
       if (l < 128) {
         m2 = (l * (255 + s)) / 65025.0;
       } else {
@@ -95,8 +95,9 @@ static RGB hsl2rgb(HSL hsl)
    }
 };
 
-static blend_hue(RGB v1, RGB v2){
-     var hsl1 = COLOR_SPACE.rgb2hsl(v1.r,v1.g,v1.b);
-             var hsl2 = COLOR_SPACE.rgb2hsl(v2.r,v2.g,v2.b);
-             return COLOR_SPACE.hsl2rgb(hsl1.h,hsl2.s,hsl2.l);
-          }
+static blend_hue(RGB v1, RGB v2)
+{
+  var hsl1 = COLOR_SPACE.rgb2hsl(v1.r,v1.g,v1.b);
+  var hsl2 = COLOR_SPACE.rgb2hsl(v2.r,v2.g,v2.b);
+  return COLOR_SPACE.hsl2rgb(hsl1.h,hsl2.s,hsl2.l);
+}

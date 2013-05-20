@@ -9,11 +9,11 @@ volatile VALUE rb_cFont = Qundef;
 static VALUE Font_s_exist(VALUE self, VALUE rbFilePath)
 {
   volatile VALUE rbRealFilePath = Qnil;
-  SearchFont(rbFilePath, (VALUE*)&rbRealFilePath, Null);
+  SearchFont(rbFilePath, (VALUE*)&rbRealFilePath, NULL);
   return !NIL_P(rbRealFilePath) ? Qtrue : Qfalse;
 }
 
-static Void Font_free(Font* font)
+static void Font_free(Font* font)
 {
   if (TTF_WasInit()) {
     TTF_CloseFont(font->sdlFont);
@@ -26,14 +26,14 @@ static VALUE Font_alloc(VALUE klass)
 {
   Font* font         = ALLOC(Font);
   font->size         = DEFAULT_FONT_SIZE;
-  font->is_bold      = False;
-  font->is_italic    = False;
-  font->is_underline = False;
-  font->sdlFont      = Null;
-  return Data_Wrap_Struct(klass, Null, Font_free, font);
+  font->is_bold      = false;
+  font->is_italic    = false;
+  font->is_underline = false;
+  font->sdlFont      = NULL;
+  return Data_Wrap_Struct(klass, NULL, Font_free, font);
 }
 
-Void strb_FontRefreshStyle(Font *font)
+void strb_FontRefreshStyle(Font *font)
 {
   const int style = TTF_STYLE_NORMAL |
                     (font->is_bold ? TTF_STYLE_BOLD : 0) |
@@ -45,17 +45,17 @@ Void strb_FontRefreshStyle(Font *font)
 /* TODO
      Change args to a hash
  */
-static VALUE Font_initialize(Size argc, VALUE* argv, VALUE self)
+static VALUE Font_initialize(int argc, VALUE* argv, VALUE self)
 {
   VALUE rbPath,
         rbRealFilePath,
         rbSize,
         rbOptions,
         val;
-  Boolean bold = False,
-          italic = False,
-          underline = False;
-  Integer ttcIndex = -1;
+  bool bold = false,
+       italic = false,
+       underline = false;
+  int32_t ttcIndex = -1;
   rb_scan_args(argc, argv, "21", &rbPath, &rbSize, &rbOptions);
   if (NIL_P(rbOptions)) {
     rbOptions = rb_hash_new();
@@ -86,7 +86,7 @@ static VALUE Font_initialize(Size argc, VALUE* argv, VALUE self)
   }
 
   const String path   = StringValueCStr(rbRealFilePath);
-  const Integer size = NUM2INT(rbSize);
+  const int32_t size = NUM2INT(rbSize);
   Font* font;
   Data_Get_Struct(self, Font, font);
   font->size         = size;
@@ -156,7 +156,7 @@ static VALUE Font_get_size(VALUE self, VALUE rbText)
   const Font* font;
   Data_Get_Struct(self, Font, font);
   const String text = StringValueCStr(rbText);
-  Integer width, height;
+  int32_t width, height;
   if (TTF_SizeUTF8(font->sdlFont, text, &width, &height)) {
     rb_raise_sdl_ttf_error();
   }

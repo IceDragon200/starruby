@@ -8,19 +8,19 @@ Texture_fill(VALUE self, VALUE rbColor)
 
   Color color;
   strb_RubyToColor(rbColor, &color);
-  const Bignum length = texture->width * texture->height;
+  const int32_t length = texture->width * texture->height;
   Pixel* pixels = texture->pixels;
-  for (Integer i = 0; i < length; i++, pixels++) {
+  for (int32_t i = 0; i < length; i++, pixels++) {
     pixels->color = color;
   }
   return Qnil;
 }
 
 static VALUE
-Texture_fill_rect(Integer argc, VALUE* argv, VALUE self)
+Texture_fill_rect(int argc, VALUE* argv, VALUE self)
 {
   Color color;
-  Integer padding;
+  int32_t padding;
   Pixel* pixels;
   Rect rect;
   Texture* texture;
@@ -54,8 +54,8 @@ Texture_fill_rect(Integer argc, VALUE* argv, VALUE self)
   pixels = &(texture->pixels[rect.x + rect.y * texture->width]);
   padding = texture->width - rect.width;
 
-  for (Integer j = 0; j < rect.height; j++, pixels += padding) {
-    for (Integer i = 0; i < rect.width; i++, pixels++) {
+  for (int32_t j = 0; j < rect.height; j++, pixels += padding) {
+    for (int32_t i = 0; i < rect.width; i++, pixels++) {
       pixels->color = color;
     }
   }

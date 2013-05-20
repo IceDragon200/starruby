@@ -5,10 +5,10 @@
 #ifndef STARRUBY_TEXTURE_H
 #define STARRUBY_TEXTURE_H
 
-typedef Void(*BlendFunc)(Pixel*, Pixel*, UByte);
+//typedef Void(*BlendFunc)(Pixel* dst, const Pixel* src, const uint8_t alpha);
 
 struct ColorDiff {
-  int16_t red, green, blue, alpha;
+  int32_t red, green, blue, alpha;
 } ;
 
 typedef enum {
@@ -79,15 +79,15 @@ typedef struct {
   uint8_t alpha;
 } RenderingTextureOptions;
 
-inline Boolean strb_Texture_dimensions_match(Texture *t1, Texture *t2)
+inline bool strb_Texture_dimensions_match(Texture *t1, Texture *t2)
 {
   return (t1->width == t2->width && t1->height == t2->height);
 }
 
-Void strb_TextureRender(const Texture* srcTexture, const Texture* dstTexture,
-                        Integer srcX, Integer srcY,
-                        Integer srcWidth, Integer srcHeight,
-                        Integer dstX, Integer dstY,
-                        const UByte alpha, const Tone *tone, const Color *color,
+void strb_TextureRender(const Texture* srcTexture, const Texture* dstTexture,
+                        int32_t srcX, int32_t srcY,
+                        int32_t srcWidth, int32_t srcHeight,
+                        int32_t dstX, int32_t dstY,
+                        const uint8_t alpha, const Tone *tone, const Color *color,
                         const BlendType blendType);
 #endif

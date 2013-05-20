@@ -1,10 +1,10 @@
 #define BIG_DELTA(x, m, n) (x * m / n)
 
 #define CALC_DST_COLOR(m, n)                             \
-  const Byte dstRed   = CLAMPU255(baseRed   + BIG_DELTA(diffRed, m, n)); \
-  const Byte dstGreen = CLAMPU255(baseGreen + BIG_DELTA(diffGreen, m, n)); \
-  const Byte dstBlue  = CLAMPU255(baseBlue  + BIG_DELTA(diffBlue, m, n)); \
-  const Byte dstAlpha = CLAMPU255(baseAlpha + BIG_DELTA(diffAlpha, m, n));
+  const int8_t dstRed   = CLAMPU255(baseRed   + BIG_DELTA(diffRed, m, n)); \
+  const int8_t dstGreen = CLAMPU255(baseGreen + BIG_DELTA(diffGreen, m, n)); \
+  const int8_t dstBlue  = CLAMPU255(baseBlue  + BIG_DELTA(diffBlue, m, n)); \
+  const int8_t dstAlpha = CLAMPU255(baseAlpha + BIG_DELTA(diffAlpha, m, n));
 
 #define SET_DST_COLOR(px)     \
   px->color.red   = dstRed;   \
@@ -13,23 +13,23 @@
   px->color.alpha = dstAlpha;
 
 static VALUE
-Texture_gradient_fill_rect(Integer argc, VALUE* argv, VALUE self)
+Texture_gradient_fill_rect(int argc, VALUE* argv, VALUE self)
 {
-  Boolean vertical;
+  bool vertical;
   Color color1;
   Color color2;
-  Integer padding;   /* Used to advance by 1 row in a texture */
-  Integer rows_back; /* Used by vertical to return to next column */
+  int32_t padding;   /* Used to advance by 1 row in a texture */
+  int32_t rows_back; /* Used by vertical to return to next column */
   Pixel* pixels;     /* Pointer to the Texture pixels data */
   Rect rect;
-  Short baseAlpha;
-  Short baseBlue;
-  Short baseGreen;
-  Short baseRed;
-  Short diffAlpha;
-  Short diffBlue;
-  Short diffGreen;
-  Short diffRed;
+  int16_t baseAlpha;
+  int16_t baseBlue;
+  int16_t baseGreen;
+  int16_t baseRed;
+  int16_t diffAlpha;
+  int16_t diffBlue;
+  int16_t diffGreen;
+  int16_t diffRed;
   Texture* texture;
 
   rb_check_frozen(self);
@@ -76,18 +76,18 @@ Texture_gradient_fill_rect(Integer argc, VALUE* argv, VALUE self)
 
   if (vertical) {
     padding = texture->width - rect.width;
-    for(Integer y = 0; y < rect.height; y++, pixels += padding) {
+    for(int32_t y = 0; y < rect.height; y++, pixels += padding) {
       CALC_DST_COLOR(y, rect.height);
-      for(Integer x = 0; x < rect.width; x++, pixels++) {
+      for(int32_t x = 0; x < rect.width; x++, pixels++) {
         SET_DST_COLOR(pixels);
       }
     }
   } else {
     padding = texture->width;
     rows_back = padding * rect.height;
-    for(Integer x = 0; x < rect.width; x++, pixels -= rows_back, pixels++) {
+    for(int32_t x = 0; x < rect.width; x++, pixels -= rows_back, pixels++) {
       CALC_DST_COLOR(x, rect.width);
-      for(Integer y = 0; y < rect.height; y++, pixels += padding) {
+      for(int32_t y = 0; y < rect.height; y++, pixels += padding) {
         SET_DST_COLOR(pixels);
       }
     }

@@ -99,6 +99,31 @@ IsPressed(const int status, const int duration, const int delay, const int inter
 }
 
 static VALUE
+Input_key_mod_states(VALUE self)
+{
+  int temp = SDL_GetModState();
+  volatile VALUE rbResult = rb_hash_new();
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("none")),      CBOOL2RVAL(temp & KMOD_NONE));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("lshiftkey")), CBOOL2RVAL(temp & KMOD_LSHIFT));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("rshiftkey")), CBOOL2RVAL(temp & KMOD_RSHIFT));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("shiftkey")),  CBOOL2RVAL(temp & KMOD_SHIFT));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("lctrlkey")),  CBOOL2RVAL(temp & KMOD_LCTRL));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("rctrlkey")),  CBOOL2RVAL(temp & KMOD_RCTRL));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("ctrlkey")),   CBOOL2RVAL(temp & KMOD_CTRL));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("laltkey")),   CBOOL2RVAL(temp & KMOD_LALT));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("raltkey")),   CBOOL2RVAL(temp & KMOD_RALT));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("altkey")),    CBOOL2RVAL(temp & KMOD_ALT));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("lmetakey")),  CBOOL2RVAL(temp & KMOD_LMETA));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("rmetakey")),  CBOOL2RVAL(temp & KMOD_RMETA));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("metakey")),   CBOOL2RVAL(temp & KMOD_META));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("numlock")),   CBOOL2RVAL(temp & KMOD_NUM));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("capslock")),  CBOOL2RVAL(temp & KMOD_CAPS));
+  rb_hash_aset(rbResult, ID2SYM(rb_intern("mode")),      CBOOL2RVAL(temp & KMOD_MODE));
+  OBJ_FREEZE(rbResult);
+  return rbResult;
+}
+
+static VALUE
 Input_keys(int argc, VALUE* argv, VALUE self)
 {
   volatile VALUE rbDevice, rbOptions;
@@ -296,7 +321,7 @@ strb_InitializeSdlInput()
   }
   char* names[] = {
     "add",
-    "back", "backslash", "backquotes",
+    "backspace", "backslash", "backquotes",
     "capslock", "clear", "closebrackets", "comma",
     "decimal", "delete", "divide", "down",
     "end", "enter", "escape", "equals",
@@ -376,6 +401,7 @@ strb_InitializeInput(VALUE rb_mStarRuby)
   rb_define_module_function(rb_mInput, "mouse_location=",
                             Input_mouse_location_eq, 1);
   rb_define_module_function(rb_mInput, "keys",   Input_keys, -1);
+  rb_define_module_function(rb_mInput, "key_mod_states",   Input_key_mod_states, 0);
   rb_define_module_function(rb_mInput, "update", Input_update, 0);
 
   volatile VALUE rbMouseLocation = rb_assoc_new(INT2FIX(0), INT2FIX(0));

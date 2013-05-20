@@ -1,8 +1,8 @@
 static VALUE Texture_initialize(VALUE self, VALUE rbWidth, VALUE rbHeight)
 {
   Texture* texture;
-  Integer width  = NUM2INT(rbWidth);
-  Integer height = NUM2INT(rbHeight);
+  int32_t width  = NUM2INT(rbWidth);
+  int32_t height = NUM2INT(rbHeight);
   Data_Get_Struct(self, Texture, texture);
 
   if (width <= 0) {

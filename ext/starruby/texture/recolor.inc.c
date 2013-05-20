@@ -1,22 +1,22 @@
-Void strb_TextureRecolor(Texture* src_texture, Rect* rect,
+void strb_TextureRecolor(Texture* src_texture, Rect* rect,
                          const Color* src_color, Color* rep_color)
 {
-  Integer dst_x      = rect->x;
-  Integer dst_y      = rect->y;
-  Integer dst_width  = rect->width;
-  Integer dst_height = rect->height;
+  int32_t dst_x      = rect->x;
+  int32_t dst_y      = rect->y;
+  int32_t dst_width  = rect->width;
+  int32_t dst_height = rect->height;
   if (!ModifyRectInTexture(src_texture,
                            &(dst_x), &(dst_y), &(dst_width), &(dst_height))) {
     return;
   }
-  const Integer tex_width = src_texture->width;
-  const Integer padding = tex_width - dst_width;
+  const int32_t tex_width = src_texture->width;
+  const int32_t padding = tex_width - dst_width;
   const Pixel* src_pixel = (Pixel*)(src_color);
   const Pixel* rep_pixel = (Pixel*)(rep_color);
   Pixel *pixels = &(src_texture->pixels[dst_x + dst_y * tex_width]);
-  //const Integer tex_height = src_texture->height;
-  for (Integer y = 0; y < dst_height; y++, pixels += padding) {
-    for (Integer x = 0; x < dst_width; x++, pixels++) {
+  //const int32_t tex_height = src_texture->height;
+  for (int32_t y = 0; y < dst_height; y++, pixels += padding) {
+    for (int32_t x = 0; x < dst_width; x++, pixels++) {
       if (TexturePixelRGBAMatch(pixels, src_pixel)) {
         pixels->color.red   = rep_pixel->color.red;
         pixels->color.green = rep_pixel->color.green;

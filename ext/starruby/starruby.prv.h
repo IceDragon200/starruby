@@ -50,14 +50,6 @@
 
 #include "rb_cairo.h"
 
-#ifndef PI
-# ifdef M_PI
-#  define PI M_PI
-# else
-#  define PI (3.1415926535897932384626433832795)
-# endif
-#endif
-
 #include "rb_classes.h"
 #include "rb_symbols.h"
 #include "starruby-version.h"
@@ -88,10 +80,10 @@ bool strb_Texture_is_disposed(const Texture* const);
 
 VALUE strb_CheckObjIsKindOf(VALUE rbObj, VALUE rbKind);
 
-Void strb_RubyToColor(VALUE rbObj, Color* color);
-Void strb_RubyToRect(VALUE rbObj, Rect* rect);
-Void strb_RubyToVector2(VALUE rbObj, Vector2* vec2);
-Void strb_RubyToVector3(VALUE rbObj, Vector3* vec3);
+void strb_RubyToColor(VALUE rbObj, Color* color);
+void strb_RubyToRect(VALUE rbObj, Rect* rect);
+void strb_RubyToVector2(VALUE rbObj, Vector2* vec2);
+void strb_RubyToVector3(VALUE rbObj, Vector3* vec3);
 
 #ifdef DEBUG
   #include <assert.h>

@@ -9,11 +9,11 @@
 #define ClipPlus(_c_, l, n) (l + (((_c_ - l) * l) / (l - n)))
 #define ClipSub(_c_, l, n) (l + (((_c_ - l) * (1 - l)) / (n - l)))
 
-static inline Void ClipColor(Pixel *pixel)
+static inline void ClipColor(Pixel *pixel)
 {
-  Short l = Lum(pixel);
-  Short n = MIN(MIN(pixel->color.red, pixel->color.green), pixel->color.blue);
-  Short x = MAX(MAX(pixel->color.red, pixel->color.green), pixel->color.blue);
+  int l = Lum(pixel);
+  int n = MIN(MIN(pixel->color.red, pixel->color.green), pixel->color.blue);
+  int x = MAX(MAX(pixel->color.red, pixel->color.green), pixel->color.blue);
   if(n < 0)
   {
     pixel->color.red   = ClipPlus(pixel->color.red,   l, n);
@@ -28,29 +28,30 @@ static inline Void ClipColor(Pixel *pixel)
   }
 }
 
-static inline Void SetLum(Pixel *pixel, const uint8_t l)
+static inline void SetLum(Pixel *pixel, const uint8_t l)
 {
-  Byte d = DIV255((l - Lum(pixel)) * pixel->color.alpha);
+  const uint8_t d = DIV255((l - Lum(pixel)) * pixel->color.alpha);
   pixel->color.red   = CLAMPU255(pixel->color.red + d);
   pixel->color.green = CLAMPU255(pixel->color.green + d);
   pixel->color.blue  = CLAMPU255(pixel->color.blue + d);
   //ClipColor(pixel);
 }
 
-static Void Pixel_blend_none(Pixel *dst, Pixel *src, Byte alpha)
+static void Pixel_blend_none(Pixel *dst, const Pixel *src, const uint8_t alpha)
 {
   *dst = *src;
+  dst->color.alpha = DIV255(src->color.alpha * alpha);
 }
 
-static Void Pixel_blend_mask(Pixel *dst, Pixel *src, Byte alpha)
+static void Pixel_blend_mask(Pixel *dst, const Pixel *src, const uint8_t alpha)
 {
   dst->color.alpha = src->color.alpha;
 }
 
-static Void Pixel_blend_alpha(Pixel *dst, Pixel *src, Byte alpha)
+static inline void Pixel_blend_alpha(Pixel *dst, const Pixel *src, const uint8_t alpha)
 {
   if ((src->color.alpha == 0) || alpha == 0) return;
-  Byte beta = DIV255(src->color.alpha * alpha);
+  const uint8_t beta = DIV255(src->color.alpha * alpha);
   if ((beta == 255) || (dst->color.alpha == 0)) {
     dst->value = src->value;
     dst->color.alpha = beta;
@@ -64,7 +65,7 @@ static Void Pixel_blend_alpha(Pixel *dst, Pixel *src, Byte alpha)
   }
 }
 
-static Void Pixel_blend_add(Pixel *dst, Pixel *src, Byte alpha)
+static inline void Pixel_blend_add(Pixel *dst, const Pixel *src, const uint8_t alpha)
 {
   const uint8_t beta = DIV255(src->color.alpha * alpha);
   const int addR = dst->color.red   + DIV255(src->color.red * beta);
@@ -76,7 +77,7 @@ static Void Pixel_blend_add(Pixel *dst, Pixel *src, Byte alpha)
   //dst->color.alpha = beta;
 }
 
-static Void Pixel_blend_sub(Pixel *dst, Pixel *src, Byte alpha)
+static inline void Pixel_blend_sub(Pixel *dst, const Pixel *src, const uint8_t alpha)
 {
   const uint8_t beta = DIV255(src->color.alpha * alpha);
   const int subR = dst->color.red   - DIV255(src->color.red * beta);
@@ -88,7 +89,7 @@ static Void Pixel_blend_sub(Pixel *dst, Pixel *src, Byte alpha)
   //dst->color.alpha = beta;
 }
 
-static Void Pixel_blend_mul(Pixel *dst, Pixel *src, Byte alpha)
+static inline void Pixel_blend_mul(Pixel *dst, const Pixel *src, const uint8_t alpha)
 {
   const uint8_t beta = DIV255(src->color.alpha * alpha);
   const int addR = DIV255(dst->color.red   * DIV255(src->color.red * beta));
@@ -105,7 +106,7 @@ static Void Pixel_blend_mul(Pixel *dst, Pixel *src, Byte alpha)
 #define Pixel_tone(dst, tone, beta) \
 { \
   if (tone->saturation < 255) { \
-    Byte l = Lum(dst); \
+    const uint8_t l = Lum(dst); \
     dst->color.red   = ALPHA(dst->color.red,   l, tone->saturation); \
     dst->color.green = ALPHA(dst->color.green, l, tone->saturation); \
     dst->color.blue  = ALPHA(dst->color.blue,  l, tone->saturation); \
@@ -137,7 +138,7 @@ static Void Pixel_blend_mul(Pixel *dst, Pixel *src, Byte alpha)
 /* TODO
  */
 #define Pixel_blend_color(d, s, a)
-//static Void Pixel_blend_color(Pixel *dst, Pixel *src, Byte alpha)
+//static Void Pixel_blend_color(Pixel *dst, const Pixel *src, const uint8_t alpha)
 //{
 //  if (dst->color.alpha > 0 && src->color.alpha > 0) {
 //

@@ -155,7 +155,7 @@ Game_free(Game* game)
   if (game) {
     if (game->sdlScreen) {
       //SDL_FreeSurface(game->sdlScreen);
-      game->sdlScreen = Null;
+      game->sdlScreen = NULL;
     }
     //if (game->sdlScreenBuffer) {
     //  SDL_FreeSurface(game->sdlScreenBuffer);
@@ -170,11 +170,11 @@ Game_alloc(VALUE klass)
 {
   // do not call rb_raise in this function
   Game* game = ALLOC(Game);
-  game->is_disposed     = False;
+  game->is_disposed     = false;
   game->windowScale     = 1;
-  game->isFullscreen    = False;
+  game->isFullscreen    = false;
   game->screen          = Qnil;
-  game->sdlScreen       = Null;
+  game->sdlScreen       = NULL;
   //game->sdlScreenBuffer = NULL;
   game->glScreen        = 0;
   game->realFps         = 0;
@@ -182,15 +182,15 @@ Game_alloc(VALUE klass)
   game->timer.before    = SDL_GetTicks();
   game->timer.before2   = game->timer.before2;
   game->timer.counter   = 0;
-  game->isWindowClosing = False;
-  game->isVsync         = False;
+  game->isWindowClosing = false;
+  game->isVsync         = false;
   return Data_Wrap_Struct(klass, Game_mark, Game_free, game);;
 }
 
 static void
 InitializeScreen(Game* game)
 {
-  const Integer bpp = 32;
+  const int32_t bpp = 32;
 
   VALUE rbScreen = game->screen;
   const Texture* screen;
@@ -236,12 +236,12 @@ InitializeScreen(Game* game)
     options |= SDL_SWSURFACE;
   }
 
-  SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   sizeof(UByte));
-  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, sizeof(UByte));
-  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  sizeof(UByte));
-  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, sizeof(UByte));
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, True);
-  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, game->isVsync ? True : False);
+  SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   sizeof(uint8_t));
+  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, sizeof(uint8_t));
+  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  sizeof(uint8_t));
+  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, sizeof(uint8_t));
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, true);
+  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, game->isVsync ? true : false);
 
   game->sdlScreen = SDL_SetVideoMode(screenWidth, screenHeight,
                                      bpp, options);
@@ -355,11 +355,11 @@ Game_dispose(VALUE self)
     }
     if (game->glScreen) {
       glDeleteTextures(1, &game->glScreen);
-      game->glScreen = Null;
+      game->glScreen = (GLuint)NULL;
     }
     SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_TIMER);
     rb_iv_set(rb_cGame, "current", Qnil);
-    game->is_disposed = True;
+    game->is_disposed = true;
   }
   return Qnil;
 }
@@ -462,7 +462,7 @@ Game_update_screen(VALUE self)
   strb_TextureCheckDisposed(texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                texture->width, texture->height,
-               Null, STRB_GL_COLOR_MODE, GL_UNSIGNED_BYTE, texture->pixels);
+               (GLuint)NULL, STRB_GL_COLOR_MODE, GL_UNSIGNED_BYTE, texture->pixels);
 
   glClear(GL_COLOR_BUFFER_BIT);
   glBegin(GL_QUADS);
@@ -482,12 +482,12 @@ Game_update_screen(VALUE self)
   return Qnil;
 }
 
-Void strb_GameUpdateEvents(Game* game)
+void strb_GameUpdateEvents(Game* game)
 {
   SDL_Event event;
   if ((SDL_PollEvent(&event) && event.type == SDL_QUIT) &&
       !game->isWindowClosing) {
-    game->isWindowClosing = True;
+    game->isWindowClosing = true;
   }
 }
 
@@ -516,7 +516,7 @@ Game_wait(VALUE self)
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
   GameTimer* gameTimer = &(game->timer);
-  const UInteger fps = game->fps;
+  const uint32_t fps = game->fps;
   Uint32 now;
   while (true) {
     now = SDL_GetTicks();

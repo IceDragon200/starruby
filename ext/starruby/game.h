@@ -2,20 +2,20 @@
 #define STARRUBY_GAME_H_
 
 typedef struct {
-  UInteger error;
-  UInteger before;
-  UInteger before2;
-  Integer counter;
+  uint32_t error;
+  uint32_t before;
+  uint32_t before2;
+  int32_t counter;
 } GameTimer;
 
 typedef struct {
-  Boolean is_disposed;
-  Boolean isFullscreen;
-  Boolean isWindowClosing;
-  Boolean isVsync;
-  Integer windowScale;
-  Integer fps;
-  Double realFps;
+  bool is_disposed;
+  bool isFullscreen;
+  bool isWindowClosing;
+  bool isVsync;
+  int32_t windowScale;
+  int32_t fps;
+  double realFps;
   GameTimer timer;
   VALUE screen;
   SDL_Surface* sdlScreen;

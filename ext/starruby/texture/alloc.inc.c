@@ -1,15 +1,15 @@
 Texture* strb_TextureAlloc()
 {
   Texture* texture = ALLOC(Texture);
-  texture->pixels = Null;
+  texture->pixels = NULL;
   texture->width  = 0;
   texture->height = 0;
   texture->clip_rect = Qnil;
-  texture->binded = False;
+  texture->binded = false;
   return texture;
 }
 
-static Void
+static void
 Texture_mark(Texture* texture)
 {
   if (texture && !NIL_P(texture->clip_rect)) {
@@ -17,15 +17,15 @@ Texture_mark(Texture* texture)
   }
 }
 
-Void strb_TextureAllocData(Texture* texture)
+void strb_TextureAllocData(Texture* texture)
 {
-  const Bignum length = texture->width * texture->height;
+  const long length = texture->width * texture->height;
   assert(length > 0);
   texture->pixels = ALLOC_N(Pixel, length);
   MEMZERO(texture->pixels, Pixel, length);
 }
 
-Texture* strb_TextureMakeNew(const Integer width, const Integer height)
+Texture* strb_TextureMakeNew(const int32_t width, const int32_t height)
 {
   Texture* texture = strb_TextureAlloc();
   texture->width  = width;
@@ -34,7 +34,7 @@ Texture* strb_TextureMakeNew(const Integer width, const Integer height)
   return texture;
 }
 
-Void strb_TextureFreePixels(Texture* texture)
+void strb_TextureFreePixels(Texture* texture)
 {
   if (texture) {
     if (!(texture->binded)) {
@@ -42,17 +42,17 @@ Void strb_TextureFreePixels(Texture* texture)
         free(texture->pixels);
       }
     }
-    texture->pixels = Null;
+    texture->pixels = NULL;
   }
 }
 
-Void strb_TextureFree(Texture* texture)
+void strb_TextureFree(Texture* texture)
 {
   if (texture) {
     strb_TextureFreePixels(texture);
     texture->clip_rect = Qnil;
     free(texture);
-    texture = Null;
+    texture = NULL;
   }
 }
 

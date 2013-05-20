@@ -2,20 +2,20 @@
 Texture* strb_TextureCrop(Texture *src_texture, Rect *crop_rect)
 {
   Texture *dst_texture;
-  Integer x      = crop_rect->x;
-  Integer y      = crop_rect->y;
-  Integer width  = crop_rect->width;
-  Integer height = crop_rect->height;
+  int32_t x      = crop_rect->x;
+  int32_t y      = crop_rect->y;
+  int32_t width  = crop_rect->width;
+  int32_t height = crop_rect->height;
   if (!ModifyRectInTexture(src_texture, &(x), &(y), &(width), &(height))) {
-    return Null;
+    return NULL;
   }
   dst_texture = strb_TextureMakeNew(width, height);
   strb_TextureRender(src_texture, dst_texture, x, y, width, height,
-                     0, 0, 0xFF, Null, Null, BLEND_TYPE_NONE);
+                     0, 0, 0xFF, NULL, NULL, BLEND_TYPE_NONE);
   return dst_texture;
 }
 
-static VALUE Texture_crop(Size argc, VALUE *argv, VALUE self)
+static VALUE Texture_crop(int argc, VALUE *argv, VALUE self)
 {
   Rect rect;
   Texture* dst_texture;

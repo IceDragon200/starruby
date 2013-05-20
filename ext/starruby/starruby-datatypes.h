@@ -12,13 +12,13 @@
 
 typedef struct {
 #if STRB_COLOR_MODE == STRB_COLOR_MODE_RGBA
-  UByte red, green, blue, alpha;
+  uint8_t red, green, blue, alpha;
 #elif STRB_COLOR_MODE == STRB_COLOR_MODE_BGRA
-  UByte blue, green, red, alpha;
+  uint8_t blue, green, red, alpha;
 #elif STRB_COLOR_MODE == STRB_COLOR_MODE_ARGB
-  UByte alpha, red, green, blue;
+  uint8_t alpha, red, green, blue;
 #elif STRB_COLOR_MODE == STRB_COLOR_MODE_ABGR
-  UByte alpha, blue, green, red;
+  uint8_t alpha, blue, green, red;
 #else
 
 #endif
@@ -28,51 +28,51 @@ typedef struct {
 #define Color Color32
 
 typedef struct {
-  UByte saturation;
-  SShort red, green, blue;
+  uint8_t saturation;
+  short red, green, blue;
 } Tone;
 
 typedef union {
   Color color;
-  UInteger value;
+  uint32_t value;
 } Pixel;
 
 // StarRuby Texture
 typedef struct {
   Pixel* pixels;
-  Integer width, height;
+  int32_t width, height;
   VALUE clip_rect;           // Clipping support
-  Boolean binded;            // for use with cairo surfaces
+  bool binded;            // for use with cairo surfaces
 } Texture;
 
 typedef struct {
-  Integer size;
-  Boolean is_bold;
-  Boolean is_italic;
-  Boolean is_underline;
+  int32_t size;
+  bool is_bold;
+  bool is_italic;
+  bool is_underline;
   TTF_Font* sdlFont;
 } Font;
 
 // Struct
 typedef struct strb_rect
 {
-  Integer x, y, width, height;
+  int32_t x, y, width, height;
 } Rect;
 
 typedef struct {
-  Double x, y;
+  double x, y;
 } Vector2;
 
 typedef struct {
-  Double x, y, z;
+  double x, y, z;
 } Vector3;
 
 typedef struct {
-  Integer x, y;
+  int32_t x, y;
 } Point2I;
 
 typedef struct {
-  Integer x, y, z;
+  int32_t x, y, z;
 } Point3I;
 
 #endif

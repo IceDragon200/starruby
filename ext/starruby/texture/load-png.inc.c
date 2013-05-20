@@ -3,7 +3,7 @@
 static VALUE Texture_s_load_png(VALUE self, VALUE rbPath)
 {
   Check_Type(rbPath, T_STRING);
-  VALUE rbFullPath = strb_GetCompletePath(rb_obj_dup(rbPath), False);
+  VALUE rbFullPath = strb_GetCompletePath(rb_obj_dup(rbPath), false);
 
   if(NIL_P(rbFullPath))
     rbFullPath = rb_obj_dup(rbPath);
@@ -16,7 +16,7 @@ static VALUE Texture_s_load_png(VALUE self, VALUE rbPath)
   // CAIRO_STATUS_SUCCESS
   cairo_status_t status = cairo_surface_status(cr_surface);
   if(status == CAIRO_STATUS_NULL_POINTER) {
-    rb_raise(rb_eStarRubyError, "C ERROR: Null Surface Pointer");
+    rb_raise(rb_eStarRubyError, "C ERROR: NULL Surface Pointer");
   } else if(status == CAIRO_STATUS_NO_MEMORY) {
     rb_raise(rb_eStarRubyError, "No Memory");
   } else if(status == CAIRO_STATUS_READ_ERROR) {

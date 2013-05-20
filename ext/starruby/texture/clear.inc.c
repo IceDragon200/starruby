@@ -6,19 +6,19 @@ Texture_clear(VALUE self)
   Data_Get_Struct(self, Texture, texture);
   strb_TextureCheckDisposed(texture);
 
-  Integer length = texture->width * texture->height;
-  Pixel* pixels = texture->pixels;
-  for (Integer i = 0; i < length; i++, pixels++) {
-    pixels->value = 0x00000000;
-  }
-  //MEMZERO(texture->pixels, Pixel, texture->width * texture->height);
+  const int32_t length = texture->width * texture->height;
+  //Pixel* pixels = texture->pixels;
+  //for (int32_t i = 0; i < length; i++, pixels++) {
+  //  pixels->value = 0x00000000;
+  //}
+  MEMZERO(texture->pixels, Pixel, length);
   return self;
 }
 
 static VALUE
-Texture_clear_rect(Integer argc, VALUE* argv, VALUE self)
+Texture_clear_rect(int argc, VALUE* argv, VALUE self)
 {
-  Integer padding;
+  int32_t padding;
   Pixel* pixels;
   Rect rect;
   Texture* texture;
@@ -44,8 +44,8 @@ Texture_clear_rect(Integer argc, VALUE* argv, VALUE self)
 
   pixels = &(texture->pixels[rect.x + rect.y * texture->width]);
   padding = texture->width - rect.width;
-  for (Integer y = 0; y < rect.height; y++, pixels += padding) {
-    for (Integer x = 0; x < rect.width; x++, pixels++) {
+  for (int32_t y = 0; y < rect.height; y++, pixels += padding) {
+    for (int32_t x = 0; x < rect.width; x++, pixels++) {
       pixels->value = 0x00000000;
     }
   }

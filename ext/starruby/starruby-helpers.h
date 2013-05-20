@@ -19,13 +19,21 @@
 #define CLAMP255 MINMAX255
 #define DIV255(x) ((x) / 255)
 
+#ifndef PI
+# ifdef M_PI
+#  define PI M_PI
+# else
+#  define PI (3.1415926535897932384626433832795)
+# endif
+#endif
+
 /* XNA */
 //#define ALPHA(src, dst, alpha) (DIV255((src) * ((alpha))) + DIV255((dst) * (0xFF - (alpha))))
 /* StarRuby */
 #define ALPHA(src, dst, a) DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a))
 
 #ifndef NUMERIC_P
-#define NUMERIC_P(_rbObj_) (TYPE(_rbObj_) == T_FIXNUM ? True : (TYPE(_rbObj_) == T_FLOAT ? True : (TYPE(_rbObj_) == T_BIGNUM ? True : False)))
+#define NUMERIC_P(_rbObj_) (TYPE(_rbObj_) == T_FIXNUM ? true : (TYPE(_rbObj_) == T_FLOAT ? true : (TYPE(_rbObj_) == T_BIGNUM ? true : false)))
 #endif
 
 #ifndef CBOOL2RVAL
@@ -33,7 +41,7 @@
 #endif
 
 #ifndef DBL2FIX
-#define DBL2FIX(n) INT2FIX((Integer)(n))
+#define DBL2FIX(n) INT2FIX((int32_t)(n))
 #endif
 
 /* Texture Helpers */

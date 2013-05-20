@@ -14,7 +14,7 @@ STRUCT_ATTR_ACCESSOR(Rect, Rect, y, INT2NUM, NUM2INT);
 STRUCT_ATTR_ACCESSOR(Rect, Rect, width, INT2NUM, NUM2INT);
 STRUCT_ATTR_ACCESSOR(Rect, Rect, height, INT2NUM, NUM2INT);
 
-Void strb_RubyToRect(VALUE rbObj, Rect* rect)
+void strb_RubyToRect(VALUE rbObj, Rect* rect)
 {
   switch (TYPE(rbObj)) {
     case T_DATA: {

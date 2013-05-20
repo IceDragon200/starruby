@@ -13,12 +13,29 @@ strb_TextureCheckDisposed(const Texture* const texture)
   }
 }
 
+/*
+  if x < rect.x
+    w -= rect.x - x
+    x = rect.x
+  end
+  if y < rect.y
+    h -= rect.y - y
+    y = rect.y
+  end
+  if (x2 = x + w) > (rx2 = rect.x + rect.width)
+    w -= x2 - rx2
+  end
+  if (y2 = y + h) > (ry2 = rect.y + rect.height)
+    h -= y2 - ry2
+  end
+ */
+
 inline static bool
 ModifyRectInTexture(const Texture* texture,
                     int* const x, int* const y,
                     int* const width, int* const height)
 {
-  Integer cx = 0, cy = 0, cw = texture->width, ch = texture->height;
+  int32_t cx = 0, cy = 0, cw = texture->width, ch = texture->height;
 
   if (texture->clip_rect != Qnil) {
     Rect* rect;
@@ -30,22 +47,26 @@ ModifyRectInTexture(const Texture* texture,
   }
 
   if (*x < cx) {
-    *width -= *x - cx;
+    *width -= cx - *x;
     *x = cx;
   }
   if (*y < cy) {
-    *height -= *y - cy;
+    *height -= cy - *y;
     *y = cy;
   }
   /* Is the X, Y outside the texture bounds? */
-  if ((Integer)cw <= *x || (Integer)ch <= *y) {
+  if ((int32_t)cw <= *x || (int32_t)ch <= *y) {
     return false;
   }
-  if ((Integer)cw <= *x + *width) {
-    *width = cw - *x;
+  const int32_t x2 = *x + *width;
+  const int32_t y2 = *y + *height;
+  const int32_t rx2 = cx + cw;
+  const int32_t ry2 = cy + ch;
+  if (x2 > rx2) {
+    *width -= x2 - rx2;
   }
-  if ((Integer)ch <= *y + *height) {
-    *height = ch - *y;
+  if (y2 > ry2) {
+    *height -= y2 - ry2;
   }
   if (*width <= 0 || *height <= 0) {
     return false;
@@ -53,13 +74,13 @@ ModifyRectInTexture(const Texture* texture,
   return true;
 }
 
-inline static Boolean ModifyRectInTexture_Rect(Texture* texture, Rect* rect)
+inline static bool ModifyRectInTexture_Rect(Texture* texture, Rect* rect)
 {
   return ModifyRectInTexture(texture, &(rect->x), &(rect->y),
                                       &(rect->width), &(rect->height));
 }
 
-inline static Boolean
+inline static bool
 Texture_is_binded(Texture *texture)
 {
   return texture->binded;

@@ -2,13 +2,13 @@ static void
 strb_cairo_surface_to_texture_ARGB(cairo_surface_t* cr_surface,
                                    Texture* strb_texture)
 {
-  const Short width  = cairo_image_surface_get_width(cr_surface);
-  const Short height = cairo_image_surface_get_height(cr_surface);
-  const Integer length = width * height;
+  const int16_t width  = cairo_image_surface_get_width(cr_surface);
+  const int16_t height = cairo_image_surface_get_height(cr_surface);
+  const int32_t length = width * height;
 
   CairoColor32* data = (CairoColor32*)cairo_image_surface_get_data(cr_surface);
 
-  for(Integer i = 0; i < length; i++)
+  for(int32_t i = 0; i < length; i++)
   {
     strb_texture->pixels[i].color.red   = data[i].red;
     strb_texture->pixels[i].color.green = data[i].green;
@@ -19,8 +19,8 @@ strb_cairo_surface_to_texture_ARGB(cairo_surface_t* cr_surface,
 
 VALUE strb_TextureFromCairoSurface(cairo_surface_t* cr_surface)
 {
-  const Short width  = cairo_image_surface_get_width(cr_surface);
-  const Short height = cairo_image_surface_get_height(cr_surface);
+  const int16_t width  = cairo_image_surface_get_width(cr_surface);
+  const int16_t height = cairo_image_surface_get_height(cr_surface);
   VALUE rbTexture = rb_class_new_instance(2,
                                           (VALUE[]){INT2NUM(width),
                                                     INT2NUM(height)},
@@ -48,7 +48,6 @@ VALUE strb_TextureFromCairoSurface(cairo_surface_t* cr_surface)
           break;
         case CAIRO_CONTENT_ALPHA:
           rb_raise(rb_eStarRubyError, "Cannot load Alpha only Image");
-          return Null;
       }
       break;
   }

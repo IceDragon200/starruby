@@ -7,45 +7,49 @@
 #define is_valid_tone(tone_p) (tone_p && (tone_p->saturation < 255 || tone_p->red != 0 || tone_p->green != 0 || tone_p->blue != 0))
 #define is_valid_color(color_p) (color_p && (color_p->alpha > 0))
 #define IMGLOOP(content) \
-  for(Integer j = 0; j < height; j++, src_px += srcPadding, dst_px += dstPadding) { \
-    for(Integer k = 0; k < width; k++, src_px++, dst_px++) { \
+  for(int32_t j = 0; j < height; j++, src_px += srcPadding, dst_px += dstPadding) { \
+    for(int32_t k = 0; k < width; k++, src_px++, dst_px++) { \
       content; \
     } \
   }
 
-Void strb_TextureRender(const Texture* src_texture, const Texture* dst_texture,
-                        Integer srcX, Integer srcY,
-                        Integer srcWidth, Integer srcHeight,
-                        Integer dstX, Integer dstY,
-                        const UByte alpha, const Tone *tone, const Color *color,
+#define PXFUNC_BLOCK(px_func) \
+  /*if(use_tone && use_color) { \
+    Pixel pixel; \
+    Pixel* px_color = (Pixel*)color; \
+    IMGLOOP({ \
+      pixel = *src_px; \
+      Pixel_tone((&pixel), tone, alpha); \
+      px_func(dst_px, &pixel, alpha); \
+      Pixel_blend_color(dst_px, px_color, NULL); \
+    }) \
+  } else if(use_color) { \
+    Pixel* px_color = (Pixel*)color; \
+    IMGLOOP({ \
+      px_func(dst_px, src_px, alpha); \
+      Pixel_blend_color(dst_px, px_color, NULL); \
+    }) \
+  } else */if(use_tone) { \
+    Pixel pixel; \
+    IMGLOOP({ \
+      pixel = *src_px; \
+      Pixel_tone((&pixel), tone, alpha); \
+      px_func(dst_px, &pixel, alpha); \
+    }) \
+  } else { \
+    IMGLOOP({ \
+      px_func(dst_px, src_px, alpha); \
+    }) \
+  }
+
+void strb_TextureRender(const Texture* src_texture, const Texture* dst_texture,
+                        int32_t srcX, int32_t srcY,
+                        int32_t srcWidth, int32_t srcHeight,
+                        int32_t dstX, int32_t dstY,
+                        const uint8_t alpha, const Tone *tone, const Color *color,
                         const BlendType blendType)
 {
-  BlendFunc blendFunc = Null;
-  Integer clip_x, clip_y, clip_width, clip_height;
-
-  switch(blendType)
-  {
-    case BLEND_TYPE_NONE:
-      blendFunc = Pixel_blend_none;
-      break;
-    case BLEND_TYPE_ALPHA:
-      blendFunc = Pixel_blend_alpha;
-      break;
-    case BLEND_TYPE_MASK:
-      blendFunc = Pixel_blend_mask;
-      break;
-    case BLEND_TYPE_ADD:
-      blendFunc = Pixel_blend_add;
-      break;
-    case BLEND_TYPE_SUB:
-      blendFunc = Pixel_blend_sub;
-      break;
-    case BLEND_TYPE_MUL:
-      blendFunc = Pixel_blend_mul;
-      break;
-    default:
-      return;
-  }
+  int32_t clip_x, clip_y, clip_width, clip_height;
 
   clip_x      = 0;
   clip_y      = 0;
@@ -94,40 +98,36 @@ Void strb_TextureRender(const Texture* src_texture, const Texture* dst_texture,
   Pixel* src_px = &(src_texture->pixels[srcX + srcY * src_texture->width]);
   Pixel* dst_px = &(dst_texture->pixels[dstX + dstY * dst_texture->width]);
 
-  const Integer srcPadding = src_texture->width - width;
-  const Integer dstPadding = dst_texture->width - width;
+  const int32_t srcPadding = src_texture->width - width;
+  const int32_t dstPadding = dst_texture->width - width;
 
-  const Boolean use_tone  = is_valid_tone(tone);
-  const Boolean use_color = is_valid_color(color);
+  const bool use_tone  = is_valid_tone(tone);
+  //const bool use_color = is_valid_color(color);
 
-  if(use_tone && use_color) {
-    Pixel pixel;
-    Pixel* px_color = (Pixel*)color;
-    IMGLOOP({
-      pixel = *src_px;
-      Pixel_tone((&pixel), tone, alpha);
-      (*blendFunc)(dst_px, &pixel, alpha);
-      Pixel_blend_color(dst_px, px_color, Null);
-    })
-  } else if(use_color) {
-    Pixel* px_color = (Pixel*)color;
-    IMGLOOP({
-      (*blendFunc)(dst_px, src_px, alpha);
-      Pixel_blend_color(dst_px, px_color, Null);
-    })
-  } else if(use_tone) {
-    Pixel pixel;
-    IMGLOOP({
-      pixel = *src_px;
-      Pixel_tone((&pixel), tone, alpha);
-      (*blendFunc)(dst_px, &pixel, alpha);
-    })
-  } else {
-    IMGLOOP({ (*blendFunc)(dst_px, src_px, alpha); })
+  switch(blendType)
+  {
+    case BLEND_TYPE_NONE:
+      PXFUNC_BLOCK(Pixel_blend_none)
+      break;
+    case BLEND_TYPE_ALPHA:
+      PXFUNC_BLOCK(Pixel_blend_alpha)
+      break;
+    case BLEND_TYPE_MASK:
+      PXFUNC_BLOCK(Pixel_blend_mask)
+      break;
+    case BLEND_TYPE_ADD:
+      PXFUNC_BLOCK(Pixel_blend_add)
+      break;
+    case BLEND_TYPE_SUB:
+      PXFUNC_BLOCK(Pixel_blend_sub)
+      break;
+    case BLEND_TYPE_MUL:
+      PXFUNC_BLOCK(Pixel_blend_mul)
+      break;
   }
 }
 
-static Void
+static void
 strb_TextureRenderWithOptions(const Texture* src_texture, const Texture* dst_texture,
                               int srcX, int srcY, int srcWidth, int srcHeight,
                               int dstX, int dstY,
@@ -411,7 +411,7 @@ static VALUE
 Texture_render_texture(int argc, VALUE* argv, VALUE self)
 {
   AffineMatrix* matrix;
-  Integer srcX, srcY, srcWidth, srcHeight;
+  int32_t srcX, srcY, srcWidth, srcHeight;
   RenderingTextureOptions options;
   Texture* dst_texture;
   Texture* src_texture;

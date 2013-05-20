@@ -2,7 +2,7 @@
 
 volatile VALUE rb_cColor = Qundef;
 
-static Void Color_free(Color* color_ptr)
+static void Color_free(Color* color_ptr)
 {
   free(color_ptr);
 }
@@ -11,11 +11,11 @@ static VALUE Color_alloc(VALUE klass)
 {
   Color* color = ALLOC(Color);
   ((Pixel*)color)->value = 0x00000000;
-  return Data_Wrap_Struct(klass, Null, Color_free, color);
+  return Data_Wrap_Struct(klass, NULL, Color_free, color);
 }
 
-Void strb_ColorSet4b(Color* dst_color,
-                     UByte alpha, UByte red, UByte green, UByte blue)
+void strb_ColorSet4b(Color* dst_color,
+                     uint8_t alpha, uint8_t red, uint8_t green, uint8_t blue)
 {
   dst_color->alpha = alpha;
   dst_color->red   = red;
@@ -23,7 +23,7 @@ Void strb_ColorSet4b(Color* dst_color,
   dst_color->blue  = blue;
 }
 
-Void strb_CopyColorTo(Color* src_color, Color* dst_color)
+void strb_CopyColorTo(Color* src_color, Color* dst_color)
 {
   ((Pixel*)dst_color)->value = ((Pixel*)src_color)->value;
 }
@@ -37,7 +37,7 @@ inline Color* strb_RubyColorPtr(VALUE rbColor)
 
 VALUE strb_RubyWrapColorPtr(VALUE klass, Color* color)
 {
-  return Data_Wrap_Struct(klass, Null, Color_free, color);
+  return Data_Wrap_Struct(klass, NULL, Color_free, color);
 }
 
 VALUE strb_ColorToRuby(Color color)
@@ -47,7 +47,7 @@ VALUE strb_ColorToRuby(Color color)
   return strb_RubyWrapColorPtr(rb_cColor, wrap_color);
 }
 
-Void strb_RubyToColor(VALUE rbObj, Color* color)
+void strb_RubyToColor(VALUE rbObj, Color* color)
 {
   switch (TYPE(rbObj)) {
     case T_DATA: {
@@ -79,12 +79,12 @@ Void strb_RubyToColor(VALUE rbObj, Color* color)
   }
 }
 
-Boolean strb_ObjIsColor(VALUE rbObj)
+bool strb_ObjIsColor(VALUE rbObj)
 {
   return rb_obj_is_kind_of(rbObj, rb_cColor);
 }
 
-inline Void strb_GetColorFromRubyValue(Color* color, VALUE rbColor)
+inline void strb_GetColorFromRubyValue(Color* color, VALUE rbColor)
 {
   strb_RubyToColor(rbColor, color);
 }
@@ -187,10 +187,10 @@ Color_set(int argc, VALUE *argv, VALUE self)
     if(NIL_P(rbAlpha)) rbAlpha = INT2FIX(255);
   }
 
-  const UByte red   = MINMAXU255(NUM2INT(rbRed));
-  const UByte green = MINMAXU255(NUM2INT(rbGreen));
-  const UByte blue  = MINMAXU255(NUM2INT(rbBlue));
-  const UByte alpha = MINMAXU255(NUM2INT(rbAlpha));
+  const uint8_t red   = MINMAXU255(NUM2INT(rbRed));
+  const uint8_t green = MINMAXU255(NUM2INT(rbGreen));
+  const uint8_t blue  = MINMAXU255(NUM2INT(rbBlue));
+  const uint8_t alpha = MINMAXU255(NUM2INT(rbAlpha));
 
   Color *trg_color;
   Data_Get_Struct(self, Color, trg_color);
@@ -229,7 +229,7 @@ Color_hash(VALUE self)
 {
   Color color;
   strb_GetColorFromRubyValue(&color, self);
-  const Bignum hash = ((Pixel)color).value;
+  const long hash = ((Pixel)color).value;
   return LONG2NUM(hash);
 }
 

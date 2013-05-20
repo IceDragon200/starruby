@@ -7,7 +7,7 @@ Texture_initialize_copy(VALUE self, VALUE rbTexture)
   Data_Get_Struct(rbTexture, Texture, origTexture);
   texture->width  = origTexture->width;
   texture->height = origTexture->height;
-  const Bignum length = texture->width * texture->height;
+  const int32_t length = texture->width * texture->height;
   texture->pixels = ALLOC_N(Pixel, length);
   MEMCPY(texture->pixels, origTexture->pixels, Pixel, length);
   texture->binded = false;

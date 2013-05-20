@@ -3,7 +3,7 @@
     Vector
 
     by IceDragon
-    vr 0.9.1
+    vr 0.9.2
     dc 24/02/2013
     dm 21/04/2013
  */
@@ -85,13 +85,13 @@ Void strb_RubyToVector2(VALUE rbObj, Vector2* vec2)
       break;
     }
     default: {
-      rb_raise(rb_eTypeError, "Can't convert %s into %s",
+      rb_raise(rb_eTypeError, "Cannot convert %s into %s",
                rb_obj_classname(rbObj), rb_class2name(rb_cVector2));
     }
   }
 }
 
-Void strb_RubyToVector3(VALUE rbObj, Vector3* vec3)
+void strb_RubyToVector3(VALUE rbObj, Vector3* vec3)
 {
   switch (TYPE(rbObj)) {
     case T_FLOAT:
@@ -124,7 +124,7 @@ Void strb_RubyToVector3(VALUE rbObj, Vector3* vec3)
       break;
     }
     default: {
-      rb_raise(rb_eTypeError, "Can't convert %s into %s",
+      rb_raise(rb_eTypeError, "Cannot convert %s into %s",
                rb_obj_classname(rbObj), rb_class2name(rb_cVector3));
     }
   }
@@ -176,17 +176,17 @@ static VALUE Vector3_to_Vector3I(VALUE self)
                                rb_cVector3I);
 }
 
-Double strb_Vector2Magnitude(Vector2* vec2)
+double strb_Vector2Magnitude(Vector2* vec2)
 {
   return sqrt(vec2->x * vec2->x + vec2->y * vec2->y);
 }
 
-Double strb_Vector3Magnitude(Vector3* vec3)
+double strb_Vector3Magnitude(Vector3* vec3)
 {
   return sqrt(vec3->x * vec3->x + vec3->y * vec3->y + vec3->z * vec3->z);
 }
 
-Double strb_Vector2Radian(Vector2* vec2)
+double strb_Vector2Radian(Vector2* vec2)
 {
   return atan2(vec2->y, vec2->x);
 }
@@ -202,8 +202,8 @@ static VALUE Vector2_magnitude_eq(VALUE self, VALUE rbMagnitude)
 {
   Vector2* vec2;
   Data_Get_Struct(self, Vector2, vec2);
-  Double new_magnitude = NUM2DBL(rbMagnitude);
-  Double rad = strb_Vector2Radian(vec2);
+  double new_magnitude = NUM2DBL(rbMagnitude);
+  double rad = strb_Vector2Radian(vec2);
   vec2->x = new_magnitude * cos(rad);
   vec2->y = new_magnitude * sin(rad);
   return Qnil;
@@ -227,8 +227,26 @@ static VALUE Vector2_radian_eq(VALUE self, VALUE rbRadian)
 {
   Vector2* vec2;
   Data_Get_Struct(self, Vector2, vec2);
-  Double new_radian = NUM2DBL(rbRadian);
-  Double mag = strb_Vector2Magnitude(vec2);
+  double new_radian = NUM2DBL(rbRadian);
+  double mag = strb_Vector2Magnitude(vec2);
+  vec2->x = mag * cos(new_radian);
+  vec2->y = mag * sin(new_radian);
+  return Qnil;
+}
+
+static VALUE Vector2_angle(VALUE self)
+{
+  Vector2* vec2;
+  Data_Get_Struct(self, Vector2, vec2);
+  return DBL2NUM(strb_Vector2Radian(vec2) * (180.0 / PI));
+}
+
+static VALUE Vector2_angle_eq(VALUE self, VALUE rbAngle)
+{
+  Vector2* vec2;
+  Data_Get_Struct(self, Vector2, vec2);
+  double new_radian = NUM2DBL(rbAngle) / (180.0 / PI);
+  double mag = strb_Vector2Magnitude(vec2);
   vec2->x = mag * cos(new_radian);
   vec2->y = mag * sin(new_radian);
   return Qnil;
@@ -278,6 +296,25 @@ static VALUE Vector3_s_one(VALUE klass)
                                 klass);
 }
 
+static VALUE Vector2_s_cast(VALUE klass, VALUE rbObj)
+{
+  Vector2 vec2;
+  strb_RubyToVector2(rbObj, &vec2);
+  return rb_class_new_instance(2, (VALUE[]){DBL2NUM(vec2.x),
+                                            DBL2NUM(vec2.y)},
+                               klass);
+}
+
+static VALUE Vector3_s_cast(VALUE klass, VALUE rbObj)
+{
+  Vector3 vec3;
+  strb_RubyToVector3(rbObj, &vec3);
+  return rb_class_new_instance(3, (VALUE[]){DBL2NUM(vec3.x),
+                                            DBL2NUM(vec3.y),
+                                            DBL2NUM(vec3.z)},
+                               klass);
+}
+
 static VALUE Vector2_init_copy(VALUE self, VALUE rbOther)
 {
   Vector2* src_vec2;
@@ -319,12 +356,17 @@ VALUE strb_InitializeVector(VALUE rb_mStarRuby)
   rb_define_singleton_method(rb_cVector2, "one", Vector2_s_one, 0);
   rb_define_singleton_method(rb_cVector3, "one", Vector3_s_one, 0);
 
+  rb_define_singleton_method(rb_cVector2, "cast", Vector2_s_cast, 1);
+  rb_define_singleton_method(rb_cVector3, "cast", Vector3_s_cast, 1);
+
   rb_define_method(rb_cVector2, "to_vec2i", Vector2_to_Vector2I, 0);
   rb_define_method(rb_cVector2, "to_vec2f", Vector2_to_Vector2F, 0);
   rb_define_method(rb_cVector2, "magnitude", Vector2_magnitude, 0);
   rb_define_method(rb_cVector2, "magnitude=", Vector2_magnitude_eq, 1);
   rb_define_method(rb_cVector2, "radian", Vector2_radian, 0);
   rb_define_method(rb_cVector2, "radian=", Vector2_radian_eq, 1);
+  rb_define_method(rb_cVector2, "angle", Vector2_angle, 0);
+  rb_define_method(rb_cVector2, "angle=", Vector2_angle_eq, 1);
   rb_define_method(rb_cVector2, "zero?", Vector2_is_zero, 0);
   rb_define_private_method(rb_cVector2, "initialize_copy", Vector2_init_copy, 1);
 

@@ -1,14 +1,14 @@
 #define ROW_CHECKED 0x10
 #define ROW_USED 0x01
 
-typedef Byte** Bitmark;
+typedef uint8_t** Bitmark;
 
-Boolean strb_TextureBucketFillRow(Texture* texture, Integer x, Integer y,
+bool strb_TextureBucketFillRow(Texture* texture, int32_t x, int32_t y,
                                   const Color* color, const Pixel* lookup_pixel,
                                   const Bitmark checked)
 {
-  Boolean filled_row = False;
-  Integer rx = x, ry = y;
+  bool filled_row = False;
+  int32_t rx = x, ry = y;
   Pixel* pixels = &(TextureGetPixel(texture, rx, ry));
   for (;rx < texture->width; rx++, pixels++) {
     if (TexturePixelRGBAMatch(pixels, lookup_pixel)) {
@@ -45,7 +45,7 @@ Boolean strb_TextureBucketFillRow(Texture* texture, Integer x, Integer y,
 
 #define ROW_FILL \
   filled_row = False; \
-  for (Integer j = 0; j < texture->width; j++) { \
+  for (int32_t j = 0; j < texture->width; j++) { \
     if (rows[oy][j] & ROW_CHECKED) { \
       if (TexturePosInBound(texture, j, ty)) { \
         if (!(rows[ty][j] & ROW_CHECKED)) { \
@@ -58,7 +58,7 @@ Boolean strb_TextureBucketFillRow(Texture* texture, Integer x, Integer y,
   oy = ty; \
   if (!(filled_row)) { break; }
 
-Void strb_TextureBucketFill(Texture* texture, Integer x, Integer y,
+void strb_TextureBucketFill(Texture* texture, int32_t x, int32_t y,
                             Color* color)
 {
   const Pixel lookup_pixel = TextureGetPixel(texture, x, y);
@@ -66,18 +66,18 @@ Void strb_TextureBucketFill(Texture* texture, Integer x, Integer y,
   if (y < 0) y = 0;
   if (!(x < texture->width)) x = texture->width-1;
   if (!(y < texture->height)) y = texture->height-1;
-  Byte** rows = malloc(sizeof(Byte*) * texture->height);
-  for (Integer rry = 0; rry < texture->height; rry++) {
-    rows[rry] = malloc(sizeof(Byte) * texture->width);
-    for (Integer rrx = 0; rrx < texture->width; rrx++) {
+  uint8_t** rows = malloc(sizeof(uint8_t*) * texture->height);
+  for (int32_t rry = 0; rry < texture->height; rry++) {
+    rows[rry] = malloc(sizeof(uint8_t) * texture->width);
+    for (int32_t rrx = 0; rrx < texture->width; rrx++) {
       rows[rry][rrx] = 0;
     }
   }
   strb_TextureBucketFillRow(texture, x, y, color,
                             &(lookup_pixel), (Bitmark)rows);
-  Integer oy = y;
-  Integer ty = y + 1;
-  Boolean filled_row = False;
+  int32_t oy = y;
+  int32_t ty = y + 1;
+  bool filled_row = False;
   for (;ty < texture->height; ty++) {
     ROW_FILL
   }
@@ -87,7 +87,7 @@ Void strb_TextureBucketFill(Texture* texture, Integer x, Integer y,
     ROW_FILL
   }
   /* Cleanup */
-  for (Integer rry = 0; rry < texture->height; rry++) {
+  for (int32_t rry = 0; rry < texture->height; rry++) {
     free(rows[rry]);
   }
   free(rows);
@@ -98,7 +98,7 @@ static VALUE Texture_bucket_fill(VALUE self,
 {
   rb_check_frozen(self);
   Color* color;
-  Integer x, y;
+  int32_t x, y;
   Texture* texture;
 
   x = NUM2INT(rbX);

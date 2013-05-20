@@ -4,7 +4,7 @@
   #include "starruby.prv.h"
   #include "kyameru-impl.h"
 
-  Void Init_starruby(Void);
+  void Init_starruby(void);
 
   VALUE strb_InitializeSymbols(VALUE rb_mStarRuby);
   VALUE strb_InitializeAudio(VALUE rb_mStarRuby);

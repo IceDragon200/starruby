@@ -6,9 +6,9 @@ include StarRuby
 Game.run(320, 240, :title => "Rectangles (Click to speed up!)") do |game|
   break if Input.keys(:keyboard).include?(:escape)
   if Input.keys(:mouse).include?(:left)
-    game.fps = 100000
+    game.frame_rate = 100000
   else
-    game.fps = 30
+    game.frame_rate = 30
   end
   begin
     x1 = rand(320)

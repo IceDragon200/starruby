@@ -3,7 +3,6 @@
 
     for interfacing with ruby cairo.
   */
-
 static VALUE
 Texture_bind_cairo(VALUE self, VALUE cairo_surface)
 {

@@ -14,22 +14,22 @@
   }
 
 #define PXFUNC_BLOCK(px_func) \
-  /*if(use_tone && use_color) { \
+  if(use_tone && use_color) { \
     Pixel pixel; \
     Pixel* px_color = (Pixel*)color; \
     IMGLOOP({ \
       pixel = *src_px; \
       Pixel_tone((&pixel), tone, alpha); \
       px_func(dst_px, &pixel, alpha); \
-      Pixel_blend_color(dst_px, px_color, NULL); \
+      Pixel_blend_color(dst_px, px_color, alpha); \
     }) \
   } else if(use_color) { \
     Pixel* px_color = (Pixel*)color; \
     IMGLOOP({ \
       px_func(dst_px, src_px, alpha); \
-      Pixel_blend_color(dst_px, px_color, NULL); \
+      Pixel_blend_color(dst_px, px_color, alpha); \
     }) \
-  } else */if(use_tone) { \
+  } else if(use_tone) { \
     Pixel pixel; \
     IMGLOOP({ \
       pixel = *src_px; \
@@ -102,7 +102,7 @@ void strb_TextureRender(const Texture* src_texture, const Texture* dst_texture,
   const int32_t dstPadding = dst_texture->width - width;
 
   const bool use_tone  = is_valid_tone(tone);
-  //const bool use_color = is_valid_color(color);
+  const bool use_color = is_valid_color(color);
 
   switch(blendType)
   {

@@ -14,8 +14,8 @@ typedef struct {
   bool isWindowClosing;
   bool isVsync;
   int32_t windowScale;
-  int32_t fps;
-  double realFps;
+  int32_t frame_rate;
+  double fps;
   GameTimer timer;
   VALUE screen;
   SDL_Surface* sdlScreen;

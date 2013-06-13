@@ -40,9 +40,13 @@ typedef union {
 // StarRuby Texture
 typedef struct {
   Pixel* pixels;
-  int32_t width, height;
+  uint16_t width, height;
   VALUE clip_rect;           // Clipping support
-  bool binded;            // for use with cairo surfaces
+  bool binded;               // for use with cairo surfaces
+  /* patch */
+  int paletteSize;
+  Color* palette;
+  uint8_t* indexes;
 } Texture;
 
 typedef struct {

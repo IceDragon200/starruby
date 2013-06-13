@@ -3,6 +3,12 @@
 volatile VALUE rb_mStarRuby = Qundef;
 volatile VALUE rb_eStarRubyError = Qundef;
 
+VALUE
+strb_GetStarRubyErrorClass(void)
+{
+  return rb_eStarRubyError;
+}
+
 VALUE strb_CheckObjIsKindOf(VALUE rbObj, VALUE rbKind)
 {
   if (!rb_obj_is_kind_of(rbObj, rbKind)) {

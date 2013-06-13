@@ -36,8 +36,8 @@ Mkrf::Generator.new( 'starruby', ["*.c", "*.cpp"] ) do |g|
   use_sdl_mixer = true
   use_openal    = false
   use_opengl    = true
-  use_cairo     = true # PNG loading support
-  use_libpng    = true # alternative PNG loading also saving support
+  use_cairo     = false # PNG loading support
+  use_libpng    = true  # alternative PNG loading also saving support
   use_libjpeg   = false
   # TODO
   use_internal_libbmp = false

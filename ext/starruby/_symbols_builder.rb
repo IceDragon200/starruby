@@ -30,6 +30,7 @@ symbols = [
   :duration,
   :expand_path,
   :extname,
+  :frame_rate,
   :fps,
   :fullscreen,
   :gamepad,
@@ -56,6 +57,9 @@ symbols = [
   :palette,
   :panning,
   :position,
+  :render,
+  :pre_render,
+  :post_render,
   :right,
   :saturation,
   :scale,
@@ -104,19 +108,19 @@ end
 mk_symbol_const  = ->(symbol) do
   var_name, _ = get_symbol_param.(symbol)
   ["volatile VALUE ID_#{var_name.to_s};",
-  "volatile VALUE symbol_#{var_name.to_s};"]
+   "volatile VALUE symbol_#{var_name.to_s};"]
 end
 
 mk_symbol_undef  = ->(symbol) do
   var_name, _ = get_symbol_param.(symbol)
   ["volatile VALUE ID_#{var_name.to_s} = Qundef;",
-  "volatile VALUE symbol_#{var_name.to_s} = Qundef;"]
+   "volatile VALUE symbol_#{var_name.to_s} = Qundef;"]
 end
 
 mk_symbol_assign = ->(symbol) do
   var_name, rb_name = get_symbol_param.(symbol)
   ["ID_#{var_name.to_s} = rb_intern(\"#{rb_name.to_s}\");",
-  "symbol_#{var_name.to_s} = ID2SYM(ID_#{var_name.to_s});"]
+   "symbol_#{var_name.to_s} = ID2SYM(ID_#{var_name.to_s});"]
 end
 
 warning = <<__EOF__

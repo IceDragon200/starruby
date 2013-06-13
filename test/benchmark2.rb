@@ -21,7 +21,7 @@ render = lambda do
   Game.screen.render_texture(texture, x, y, opts)
 end
 
-Game.fps = 1000
+Game.frame_rate = 1000
 counter = 0
 Benchmark.bm do |b|
   b.report do

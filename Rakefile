@@ -17,16 +17,14 @@ CLEAN.include("ext/starruby/Rakefile",
               "pkg")
 
 setup_extension('starruby', 'starruby')
-#setup_extension('cairo', 'cairo')
-#setup_extension('chipmunk', 'chipmunk')
 
-task :symboltable do
+task :symbol_table do
   ruby('ext/starruby/_symbols_builder.rb')
 end
 
 # for gem building
-task :extension => [:starruby]#, :cairo, :chipmunk]
+task :extension => [:starruby]
 task :compile => :extension
-task :default => [:clean, :symboltable, :extension]
+task :default => [:clean, :symbol_table, :extension]
 
 

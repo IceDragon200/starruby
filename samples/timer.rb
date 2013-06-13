@@ -15,8 +15,8 @@ Game.run(320, 240, :timer => "Timer") do |game|
   s = game.screen
   s.clear
   i = -1
-  s.render_text("FPS: #{game.fps}",                8, 8 + 32 * (i += 1), font, white)
-  s.render_text("Real FPS: %0.6f" % game.real_fps, 8, 8 + 32 * (i += 1), font, white)
+  s.render_text("FPS: #{game.frame_rate}",                8, 8 + 32 * (i += 1), font, white)
+  s.render_text("Real FPS: %0.6f" % game.fps, 8, 8 + 32 * (i += 1), font, white)
   s.render_text("Frames: #{counter}",              8, 8 + 32 * (i += 1), font, white)
   s.render_text("Ticks: #{Game.ticks}",            8, 8 + 32 * (i += 1), font, white)
 end

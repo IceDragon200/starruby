@@ -5,7 +5,7 @@ include StarRuby
 
 # Create Texture object with a palette
 main_texture = Texture.load("images/ruby_palette", :palette => true)
-# Create the palette image 
+# Create the palette image
 palette_texture = Texture.new(16 * 4, 16 * 4)
 
 counter = 0
@@ -13,7 +13,7 @@ Game.run(320, 240, :title => "Palette") do |game|
   break if Input.keys(:keyboard).include?(:escape)
   # Change the palette randomly at 2 second interval
   counter += 1
-  counter %= game.fps * 2
+  counter %= game.frame_rate * 2
   if counter == 0
     new_palette = Array.new(main_texture.palette.size) do |i|
       Color.new(rand(256), rand(256), rand(256), main_texture.palette[i].alpha)

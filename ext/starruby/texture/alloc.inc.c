@@ -1,11 +1,14 @@
 Texture* strb_TextureAlloc()
 {
   Texture* texture = ALLOC(Texture);
-  texture->pixels = NULL;
-  texture->width  = 0;
-  texture->height = 0;
-  texture->clip_rect = Qnil;
-  texture->binded = false;
+  texture->pixels      = NULL;
+  texture->width       = 0;
+  texture->height      = 0;
+  texture->clip_rect   = Qnil;
+  texture->binded      = false;
+  texture->paletteSize = 0;
+  texture->palette     = NULL;
+  texture->indexes     = NULL;
   return texture;
 }
 

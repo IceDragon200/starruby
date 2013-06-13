@@ -291,7 +291,7 @@ strb_InitializeTransition(VALUE rb_mStarRuby)
   rb_define_singleton_method(rb_cTransition, "from_texture",
                              TextureToTransition, 1);
   rb_define_singleton_method(rb_cTransition, "crossfade",
-                             Transition_crossfade, 4);
+                             Transition_s_crossfade, 4);
 
   rb_define_method(rb_cTransition, "initialize", Transition_initialize, 2);
   rb_define_method(rb_cTransition, "initialize_copy", Transition_init_copy, 1);

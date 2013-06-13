@@ -48,7 +48,7 @@
 # endif
 #endif
 
-#include "rb_cairo.h"
+//#include "rb_cairo.h"
 
 #include "rb_classes.h"
 #include "rb_symbols.h"
@@ -57,6 +57,10 @@
 #include "starruby-helpers.h"
 #include "starruby-accessor.h"
 #include "starruby-errors.h"
+
+/* Forward Declarations */
+
+VALUE strb_GetStarRubyErrorClass();
 
 VALUE strb_GetCompletePath(VALUE, bool);
 

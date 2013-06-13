@@ -4,7 +4,7 @@
     dm 24/03/2013
   vr 1.0.0
   */
-static VALUE Transition_crossfade(VALUE module,
+static VALUE Transition_s_crossfade(VALUE module,
                                   VALUE rbT0, VALUE rbT1, VALUE rbT2,
                                   VALUE rbDelta)
 {

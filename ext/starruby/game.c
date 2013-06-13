@@ -11,6 +11,8 @@
 #define STRB_GL_COLOR_MODE GL_ABGR
 #endif
 
+//#define STRB_USE_RENDER_CALLBACKS
+
 volatile VALUE rb_cGame = Qundef;
 
 inline static void
@@ -85,12 +87,12 @@ strb_GetWindowScale(void)
 }
 
 static VALUE Game_dispose(VALUE);
-static VALUE Game_fps(VALUE);
-static VALUE Game_fps_eq(VALUE, VALUE);
+static VALUE Game_frame_rate(VALUE);
+static VALUE Game_frame_rate_eq(VALUE, VALUE);
 static VALUE Game_screen(VALUE);
 static VALUE Game_title(VALUE);
 static VALUE Game_title_eq(VALUE, VALUE);
-static VALUE Game_real_fps(VALUE);
+static VALUE Game_fps(VALUE);
 static VALUE Game_update_screen(VALUE);
 static VALUE Game_update_state(VALUE);
 static VALUE Game_wait(VALUE);
@@ -177,10 +179,11 @@ Game_alloc(VALUE klass)
   game->sdlScreen       = NULL;
   //game->sdlScreenBuffer = NULL;
   game->glScreen        = 0;
-  game->realFps         = 0;
+  game->fps             = 0;
+  game->frame_rate      = 60;
   game->timer.error     = 0;
   game->timer.before    = SDL_GetTicks();
-  game->timer.before2   = game->timer.before2;
+  game->timer.before2   = game->timer.before;
   game->timer.counter   = 0;
   game->isWindowClosing = false;
   game->isVsync         = false;
@@ -252,7 +255,8 @@ InitializeScreen(Game* game)
   glEnable(GL_BLEND);                // Turn Blending on
   glEnable(GL_TEXTURE_2D);           //
   glDisable(GL_DEPTH_TEST);          // Turn Depth Testing off
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+  //glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   glMatrixMode(GL_PROJECTION);
 
@@ -299,7 +303,7 @@ Game_initialize(int argc, VALUE* argv, VALUE self)
   const int height = NUM2INT(rbHeight);
 
   volatile VALUE rbFps = rb_hash_aref(rbOptions, symbol_fps);
-  Game_fps_eq(self, !NIL_P(rbFps) ? rbFps : INT2FIX(30));
+  Game_frame_rate_eq(self, !NIL_P(rbFps) ? rbFps : INT2FIX(60));
 
   volatile VALUE rbTitle = rb_hash_aref(rbOptions, symbol_title);
   Game_title_eq(self, !NIL_P(rbTitle) ? rbTitle : rb_str_new2(""));
@@ -355,7 +359,7 @@ Game_dispose(VALUE self)
     }
     if (game->glScreen) {
       glDeleteTextures(1, &game->glScreen);
-      game->glScreen = (GLuint)NULL;
+      game->glScreen = 0;
     }
     SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_TIMER);
     rb_iv_set(rb_cGame, "current", Qnil);
@@ -373,22 +377,22 @@ Game_disposed(VALUE self)
 }
 
 static VALUE
-Game_fps(VALUE self)
+Game_frame_rate(VALUE self)
 {
   const Game* game;
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
-  return INT2NUM(game->fps);
+  return INT2NUM(game->frame_rate);
 }
 
 static VALUE
-Game_fps_eq(VALUE self, VALUE rbFps)
+Game_frame_rate_eq(VALUE self, VALUE rbFrameRate)
 {
   Game* game;
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
-  game->fps = NUM2INT(rbFps);
-  return rbFps;
+  game->frame_rate = NUM2INT(rbFrameRate);
+  return Qnil;
 }
 
 static VALUE
@@ -412,12 +416,12 @@ Game_fullscreen_eq(VALUE self, VALUE rbFullscreen)
 }
 
 static VALUE
-Game_real_fps(VALUE self)
+Game_fps(VALUE self)
 {
   const Game* game;
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
-  return rb_float_new(game->realFps);
+  return rb_float_new(game->fps);
 }
 
 static VALUE
@@ -451,6 +455,20 @@ Game_title_eq(VALUE self, VALUE rbTitle)
   return rb_iv_set(self, "title", rb_str_dup(rbTitle));
 }
 
+#ifdef STRB_USE_RENDER_CALLBACKS
+static VALUE
+Game_pre_render(VALUE self)
+{
+  return Qnil;
+}
+
+static VALUE
+Game_post_render(VALUE self)
+{
+  return Qnil;
+}
+#endif
+
 static VALUE
 Game_update_screen(VALUE self)
 {
@@ -458,11 +476,17 @@ Game_update_screen(VALUE self)
   const Texture* texture;
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
+
+  // Rendering callback function
+#ifdef STRB_USE_RENDER_CALLBACKS
+  rb_funcall(self, ID_pre_render, 0);
+#endif
+
   Data_Get_Struct(game->screen, Texture, texture);
   strb_TextureCheckDisposed(texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                texture->width, texture->height,
-               (GLuint)NULL, STRB_GL_COLOR_MODE, GL_UNSIGNED_BYTE, texture->pixels);
+               0, STRB_GL_COLOR_MODE, GL_UNSIGNED_BYTE, texture->pixels);
 
   glClear(GL_COLOR_BUFFER_BIT);
   glBegin(GL_QUADS);
@@ -479,6 +503,12 @@ Game_update_screen(VALUE self)
   glEnd();
 
   SDL_GL_SwapBuffers();
+
+  // Rendering callback function
+#ifdef STRB_USE_RENDER_CALLBACKS
+  rb_funcall(self, ID_post_render, 0);
+#endif
+
   return Qnil;
 }
 
@@ -516,11 +546,13 @@ Game_wait(VALUE self)
   Data_Get_Struct(self, Game, game);
   CheckDisposed(game);
   GameTimer* gameTimer = &(game->timer);
-  const uint32_t fps = game->fps;
+
+  const uint32_t frame_rate = game->frame_rate;
+
   Uint32 now;
   while (true) {
     now = SDL_GetTicks();
-    Uint32 diff = (now - gameTimer->before) * fps + gameTimer->error;
+    Uint32 diff = (now - gameTimer->before) * frame_rate + gameTimer->error;
     if (1000 <= diff) {
       gameTimer->error = MIN(diff - 1000, 1000);
       gameTimer->before = now;
@@ -528,13 +560,14 @@ Game_wait(VALUE self)
     }
     SDL_Delay(1);
   }
+
   gameTimer->counter++;
   if (1000 <= now - gameTimer->before2) {
-    game->realFps = gameTimer->counter * 1000.0 /
-      (now - gameTimer->before2);
+    game->fps = gameTimer->counter * 1000.0 / (now - gameTimer->before2);
     gameTimer->counter = 0;
     gameTimer->before2 = SDL_GetTicks();
   }
+
   return Qnil;
 }
 
@@ -580,11 +613,11 @@ strb_InitializeGame(VALUE _rb_mStarRuby)
   rb_define_private_method(rb_cGame, "initialize", Game_initialize, -1);
   rb_define_method(rb_cGame, "dispose",         Game_dispose,         0);
   rb_define_method(rb_cGame, "disposed?",       Game_disposed,        0);
-  rb_define_method(rb_cGame, "fps",             Game_fps,             0);
-  rb_define_method(rb_cGame, "fps=",            Game_fps_eq,          1);
+  rb_define_method(rb_cGame, "frame_rate",      Game_frame_rate,      0);
+  rb_define_method(rb_cGame, "frame_rate=",     Game_frame_rate_eq,   1);
   rb_define_method(rb_cGame, "fullscreen?",     Game_fullscreen,      0);
   rb_define_method(rb_cGame, "fullscreen=",     Game_fullscreen_eq,   1);
-  rb_define_method(rb_cGame, "real_fps",        Game_real_fps,        0);
+  rb_define_method(rb_cGame, "fps",             Game_fps,             0);
   rb_define_method(rb_cGame, "screen",          Game_screen,          0);
   rb_define_method(rb_cGame, "title",           Game_title,           0);
   rb_define_method(rb_cGame, "title=",          Game_title_eq,        1);
@@ -595,6 +628,12 @@ strb_InitializeGame(VALUE _rb_mStarRuby)
   rb_define_method(rb_cGame, "window_closing?", Game_window_closing,  0);
   rb_define_method(rb_cGame, "window_scale",    Game_window_scale,    0);
   rb_define_method(rb_cGame, "window_scale=",   Game_window_scale_eq, 1);
+
+  // Rendering callback functions
+#ifdef STRB_USE_RENDER_CALLBACKS
+  rb_define_method(rb_cGame, "pre_render",      Game_pre_render,      0);
+  rb_define_method(rb_cGame, "post_render",     Game_post_render,     0);
+#endif
 
   return rb_cGame;
 }

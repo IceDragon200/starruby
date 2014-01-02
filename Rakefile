@@ -8,23 +8,20 @@ require 'rake/clean'
 require 'rdoc/task'
 require 'mkrf/rakehelper'
 
-CLEAN.include("ext/starruby/Rakefile",
-              "ext/starruby/mkrf.log", "ext/starruby/*.so",
-              "ext/starruby/*.bundle", "lib/*.so",
-              "lib/*.bundle", "ext/starruby/*.o{,bj}",
-              "ext/starruby/*.lib", "ext/starruby/*.exp",
-              "ext/starruby/*.pdb",
-              "pkg")
+CLEAN.include("ext/starruby_ext/Rakefile",
+              "ext/starruby_ext/mkrf.log", "ext/starruby_ext/*.so",
+              "ext/starruby_ext/*.bundle", "lib/*.so", "lib/**/*.so",
+              "lib/*.bundle", "ext/starruby_ext/*.o{,bj}",
+              "ext/starruby_ext/*.lib", "ext/starruby_ext/*.exp",
+              "ext/starruby_ext/*.pdb")
 
-setup_extension('starruby', 'starruby')
+setup_extension('starruby_ext', 'starruby_ext')
 
 task :symbol_table do
-  ruby('ext/starruby/_symbols_builder.rb')
+  ruby 'ext/starruby_ext/_symbols_builder.rb'
 end
 
 # for gem building
-task :extension => [:starruby]
-task :compile => :extension
-task :default => [:clean, :symbol_table, :extension]
-
-
+task :extension => [:starruby_ext]
+task :build => :extension
+task :default => [:symbol_table, :extension]

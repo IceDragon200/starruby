@@ -1,3 +1,0 @@
-install-so: install-headers
-install-headers:
-	$(INSTALL_DATA) $(srcdir)/rb_cairo.h $(RUBYARCHDIR)

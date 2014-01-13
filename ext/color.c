@@ -273,6 +273,14 @@ Color_s_cast(VALUE klass, VALUE rbObj)
   return rbColor;
 }
 
+static VALUE
+Color_value(VALUE self)
+{
+  Color* color;
+  Data_Get_Struct(self, Color, color);
+  return INT2NUM(((Pixel*)color)->value);
+}
+
 VALUE
 strb_InitializeColor(VALUE rb_mStarRuby)
 {
@@ -307,5 +315,8 @@ strb_InitializeColor(VALUE rb_mStarRuby)
 
   rb_define_method(rb_cColor, "eql?",  Color_is_equal, 1);
   rb_define_alias(rb_cColor, "==", "eql?");
+
+  rb_define_method(rb_cColor, "value",  Color_value, 0);
+
   return rb_cColor;
 }

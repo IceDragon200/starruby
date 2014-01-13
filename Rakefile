@@ -1,6 +1,7 @@
 #!/usr/bin/env rake
 # starruby/Rakefile
 #
+require 'fileutils'
 require 'rubygems'
 require 'rubygems/package_task'
 require 'rake'
@@ -8,17 +9,23 @@ require 'rake/clean'
 require 'rdoc/task'
 require 'mkrf/rakehelper'
 
-CLEAN.include("ext/starruby_ext/Rakefile",
-              "ext/starruby_ext/mkrf.log", "ext/starruby_ext/*.so",
-              "ext/starruby_ext/*.bundle", "lib/*.so", "lib/**/*.so",
-              "lib/*.bundle", "ext/starruby_ext/*.o{,bj}",
-              "ext/starruby_ext/*.lib", "ext/starruby_ext/*.exp",
-              "ext/starruby_ext/*.pdb")
-
-setup_extension('starruby_ext', 'starruby_ext')
+CLEAN.include("ext/Makefile",
+              "ext/mkmf.log", "ext/*.so",
+              "ext/*.bundle", "lib/*.so", "lib/**/*.so",
+              "lib/*.bundle", "ext/*.o{,bj}",
+              "ext/*.lib", "ext/*.exp",
+              "ext/*.pdb")
 
 task :symbol_table do
-  ruby 'ext/starruby_ext/_symbols_builder.rb'
+  ruby 'ext/_symbols_builder.rb'
+end
+
+task :starruby_ext do
+  Dir.chdir("ext") do
+    ruby("extconf.rb") && sh("make")
+  end
+  FileUtils.mkdir_p("lib/mri")
+  FileUtils.cp("ext/starruby_ext.so", "lib/mri/starruby_ext.so")
 end
 
 # for gem building

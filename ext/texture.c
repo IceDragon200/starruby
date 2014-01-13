@@ -2457,10 +2457,6 @@ Texture_change_hue(VALUE self, VALUE rbAngle)
   return rbTexture;
 }
 
-
-#ifdef STRB_CAN_LOAD_PNG
-  #define STRB_TEXTURE_LOAD_PNG
-#define USE_LIBPNG_LOAD_PNG
 //#define USE_CAIRO_LOAD_PNG
 
 #ifdef HAVE_CAIRO
@@ -2522,8 +2518,6 @@ strb_TextureFromCairoSurface(cairo_surface_t* cr_surface)
   return rbTexture;
 }
 #endif
-
-#ifdef USE_LIBPNG_LOAD_PNG
 
 typedef struct {
   char* bytes;
@@ -2722,62 +2716,9 @@ Texture_s_load_png(int argc, VALUE* argv, VALUE self)
   return rbTexture;
 }
 
-#elif USE_CAIRO_LOAD_PNG
-
-static VALUE Texture_s_load_png(int argc, VALUE* argv, VALUE self)
-{
-  VALUE self;
-  VALUE rbPath;
-  VALUE rbUnused;
-  rb_scan_args(argc, "11", argv, &self, &rbPath, &rbUnused);
-
-  Check_Type(rbPath, T_STRING);
-  VALUE rbFullPath = strb_GetCompletePath(rb_obj_dup(rbPath), false);
-
-  if(NIL_P(rbFullPath))
-    rbFullPath = rb_obj_dup(rbPath);
-    //rb_raise(rb_eStarRubyError, "Could not resolve basepath");
-
-  const char* filename      = StringValueCStr(rbPath);
-  const char* filename_full = StringValueCStr(rbFullPath);
-
-  cairo_surface_t* cr_surface = cairo_image_surface_create_from_png(filename_full);
-  // CAIRO_STATUS_SUCCESS
-  cairo_status_t status = cairo_surface_status(cr_surface);
-  if(status == CAIRO_STATUS_NULL_POINTER) {
-    rb_raise(rb_eStarRubyError, "C ERROR: NULL Surface Pointer");
-  } else if(status == CAIRO_STATUS_NO_MEMORY) {
-    rb_raise(rb_eStarRubyError, "No Memory");
-  } else if(status == CAIRO_STATUS_READ_ERROR) {
-    rb_raise(rb_eStarRubyError, "Read error occured in png file");
-  } else if(status == CAIRO_STATUS_INVALID_CONTENT) {
-    rb_raise(rb_eStarRubyError, "Inavlid PNG content");
-  } else if(status == CAIRO_STATUS_INVALID_FORMAT) {
-    rb_raise(rb_eStarRubyError, "Inavlid PNG Format");
-  } else if(status == CAIRO_STATUS_INVALID_VISUAL) {
-    rb_raise(rb_eStarRubyError, "Invalid PNG Visual");
-  } else if(status == CAIRO_STATUS_FILE_NOT_FOUND) {
-    rb_raise(rb_path2class("Errno::ENOENT"), "%s", filename);
-  }
-
-  cairo_surface_flush(cr_surface);
-  VALUE rbTexture = strb_TextureFromCairoSurface(cr_surface);
-
-  //cairo_surface_mark_dirty(cr_surface);
-  cairo_surface_destroy(cr_surface);
-
-  return rbTexture;
-}
-
-#endif
-
-#endif
-
-#ifdef STRB_CAN_SAVE_PNG
-  static VALUE
+static VALUE
 Texture_save_png(VALUE self, VALUE rbPath)
 {
-#ifdef HAVE_LIBPNG
   const Texture* texture;
   Data_Get_Struct(self, Texture, texture);
   strb_TextureCheckDisposed(texture);
@@ -2813,17 +2754,7 @@ Texture_save_png(VALUE self, VALUE rbPath)
   png_destroy_write_struct(&pngPtr, &infoPtr);
   fclose(fp);
   return Qtrue;
-#else
-  rb_raise(rb_StarRubyError,
-           "saving of png files is disabled, try recompiling with libpng")
-  return Qfalse;
-#endif
 }
-
-#define STRB_TEXTURE_SAVE_PNG
-
-#endif
-
 
 // Verbosity
 // 0 - Ignore and fix all errors internally
@@ -3264,10 +3195,8 @@ VALUE strb_InitializeTexture(VALUE rb_mStarRuby)
   rb_cTexture = rb_define_class_under(rb_mStarRuby, "Texture", rb_cObject);
   rb_define_alloc_func(rb_cTexture, Texture_alloc);
 
-#ifdef STRB_TEXTURE_LOAD_PNG
   rb_define_singleton_method(rb_cTexture, "load_png", Texture_s_load_png, -1);
   rb_define_singleton_method(rb_cTexture, "load", Texture_s_load_png, -1);
-#endif
 
   rb_define_private_method(rb_cTexture, "initialize", Texture_initialize, 2);
   rb_define_private_method(rb_cTexture, "initialize_copy",
@@ -3328,11 +3257,9 @@ VALUE strb_InitializeTexture(VALUE rb_mStarRuby)
                    Texture_render_texture, -1);
 
   /* saving options */
-#ifdef STRB_TEXTURE_SAVE_PNG
-  rb_define_method(rb_cTexture, "save_png",
-                   Texture_save_png, 1);
+  rb_define_method(rb_cTexture, "save_png", Texture_save_png, 1);
   rb_define_alias(rb_cTexture, "save", "save_png");
-#endif
+
   rb_define_method(rb_cTexture, "size",
                    Texture_size, 0);
 

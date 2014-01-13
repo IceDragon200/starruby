@@ -92,7 +92,7 @@ MatrixI_dims_to_index(MatrixI *matrix, ArrayI *dims)
 
   if (dimensions->size != dim_count) return -1;
 
-  for(uint i = 0; i < offsets->size; ++i)
+  for(uint32_t i = 0; i < offsets->size; ++i)
   {
     if(dims->data[i] < 0 || !(dims->data[i] < dimensions->data[i])) return -1;
     n += dims->data[i] * offsets->data[i];
@@ -106,7 +106,7 @@ MatrixI_entry_dims_to_index(MatrixI *matrix, int argc, VALUE *argv)
 {
   const uint32_t dim_count = matrix->dimensions->size;
 
-  if(dim_count != (uint)argc)
+  if(dim_count != (uint32_t)argc)
     rb_raise(rb_eArgError, "expected %d args but recived %d", dim_count, argc);
 
   return MatrixI_dims_to_index(
@@ -182,7 +182,7 @@ static VALUE
 MatrixI_initialize(VALUE self, VALUE dimensions, VALUE defaul_val)
 {
   volatile MatrixI *matrix;
-  const uint dim_size = NUM2INT(rb_funcall(dimensions, ID_size, 0));
+  const uint32_t dim_size = NUM2INT(rb_funcall(dimensions, ID_size, 0));
 
   Data_Get_Struct(self, MatrixI, matrix);
   matrix->dimensions = strb_AllocArrayI(dim_size, 0);

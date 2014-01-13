@@ -1,4 +1,4 @@
 #
 # starruby/local.rb
 #
-require_relative 'lib/rbstarruby.rb'
+require_relative 'lib/starruby'

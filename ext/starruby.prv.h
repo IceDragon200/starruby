@@ -7,12 +7,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <SDL.h>
-#ifdef HAVE_SDL_MIXER
-#  include <SDL_mixer.h>
-#endif
-#include <SDL_ttf.h>
-#include <SDL_opengl.h>
+#include <SDL/SDL.h>
+#include <SDL/SDL_mixer.h>
+#include <SDL/SDL_ttf.h>
+#include <SDL/SDL_opengl.h>
 #include <assert.h>
 #ifdef STRB_CAN_LOAD_SVG
 #  include <librsvg/rsvg.h>

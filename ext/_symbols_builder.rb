@@ -191,6 +191,6 @@ __EOF__
 
 ### output
 dir = File.dirname(__FILE__)
-File.write(File.join(dir, 'include/rb_symbols.h'), file_contents_h)
+File.write(File.join(dir, 'rb_symbols.h'), file_contents_h)
 File.write(File.join(dir, 'rb_symbols.c'), file_contents_c)
 puts "Built Symbol Table. There are a total of #{symbols.size} symbols"

@@ -13,7 +13,7 @@
 
 volatile VALUE rb_cTexture = Qundef;
 
-static void
+static inline void
 strb_RubyToBlendType(VALUE val, BlendType* blend_type)
 {
   switch(TYPE(val)) {
@@ -216,7 +216,7 @@ AssignPerspectiveOptions(PerspectiveOptions* options, VALUE rbOptions,
   }
 }
 
-static void
+static inline void
 AssignRenderingTextureOptions(VALUE rbOptions,
                               RenderingTextureOptions* options)
 {
@@ -290,7 +290,7 @@ AssignRenderingTextureOptions(VALUE rbOptions,
   }
 }
 
-static bool
+static inline bool
 stratos_Texture_init(Texture* texture)
 {
   texture->pixels       = NULL;
@@ -662,8 +662,6 @@ Texture_aset(VALUE self, VALUE rbX, VALUE rbY, VALUE rbColor)
 #define ClipPlus(_c_, l, n) (l + (((_c_ - l) * l) / (l - n)))
 #define ClipSub(_c_, l, n) (l + (((_c_ - l) * (1 - l)) / (n - l)))
 
-//#define alpha_check(alpha, pixel) if(!alpha || !pixel->color.alpha) return
-#define alpha_check(alpha, pixel)
 #define pixel_prog inline
 //#define pixel_prog void
 
@@ -688,126 +686,190 @@ ClipColor(Pixel *pixel)
 }
 
 static pixel_prog void
-SetLum(Pixel *pixel, const uint8_t l)
+SetLum(Pixel *pixel, uint8_t l)
 {
-  const uint8_t d = DIV255((l - Lum(pixel)) * pixel->color.alpha);
+  const uint8_t d = FAST_DIV255((l - Lum(pixel)) * pixel->color.alpha);
   pixel->color.red   = CLAMPU255(pixel->color.red + d);
   pixel->color.green = CLAMPU255(pixel->color.green + d);
   pixel->color.blue  = CLAMPU255(pixel->color.blue + d);
   //ClipColor(pixel);
 }
 
-#ifdef PIXEL_POINTER
-
 static pixel_prog void
-Pixel_blend_none(Pixel *dst, const Pixel *src, const uint8_t alpha)
+Pixel_blend_none(Pixel *dst, Pixel *src, uint8_t alpha)
 {
-  *dst = *src;
-  dst->color.alpha = DIV255(src->color.alpha * alpha);
-}
-
-static pixel_prog void
-Pixel_blend_src_mask(Pixel *dst, const Pixel *src, const uint8_t alpha)
-{
-  dst->color.alpha = DIV255(src->color.alpha * alpha);
-}
-
-static pixel_prog void
-Pixel_blend_dst_mask(Pixel *dst, const Pixel *src, const uint8_t alpha)
-{
-  const uint8_t old_alpha = dst->color.alpha;
-  *dst = *src;
-  dst->color.alpha = DIV255(old_alpha * alpha);
-}
-
-static pixel_prog void
-Pixel_blend_clear(Pixel *dst, const Pixel *src, const uint8_t alpha)
-{
-  const uint8_t beta = DIV255(src->color.alpha * alpha);
-  if(!beta) return;
-  dst->color.alpha = MAX(dst->color.alpha - beta, 0);
-}
-
-static pixel_prog void
-Pixel_blend_alpha(Pixel *dst, const Pixel *src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  uint8_t beta = DIV255(alpha * src->color.alpha);
-  if (!beta) return;
-  if ((beta == 255) || (dst->color.alpha == 0)) {
+  if (alpha != 255) {
+    dst->color.red   = src->color.red;
+    dst->color.green = src->color.green;
+    dst->color.blue  = src->color.blue;
+    dst->color.alpha = FAST_DIV255(src->color.alpha * alpha);
+  } else {
     *dst = *src;
-    dst->color.alpha = beta;
-  } else if (beta) {
-    dst->color.red   = ALPHA(src->color.red,   dst->color.red,   beta);
-    dst->color.green = ALPHA(src->color.green, dst->color.green, beta);
-    dst->color.blue  = ALPHA(src->color.blue,  dst->color.blue,  beta);
+  }
+}
+
+static pixel_prog void
+Pixel_blend_src_mask(Pixel *dst, Pixel *src, uint8_t alpha)
+{
+  if (alpha != 255) {
+    dst->color.alpha = FAST_DIV255(src->color.alpha * alpha);
+  } else {
+    dst->color.alpha = src->color.alpha;
+  }
+}
+
+static pixel_prog void
+Pixel_blend_dst_mask(Pixel *dst, Pixel *src, uint8_t alpha)
+{
+  dst->color.red   = src->color.red;
+  dst->color.green = src->color.green;
+  dst->color.blue  = src->color.blue;
+  if (alpha != 255) {
+    dst->color.alpha = FAST_DIV255(dst->color.alpha * alpha);
+  }
+}
+
+static pixel_prog void
+Pixel_blend_clear(Pixel *dst, Pixel *src, uint8_t alpha)
+{
+  if (alpha != 255) {
+    uint8_t beta = FAST_DIV255(src->color.alpha * alpha);
+    dst->color.alpha = MAX(dst->color.alpha - beta, 0);
+  } else {
+    dst->color.alpha = MAX(dst->color.alpha - src->color.alpha, 0);
+  }
+}
+
+static pixel_prog void
+Pixel_blend_alpha(Pixel *dst, Pixel *src, uint8_t alpha)
+{
+  if (alpha != 255) {
+    uint8_t beta = DIV255(alpha * src->color.alpha);
+    if ((beta == 255) || (dst->color.alpha == 0)) {
+      *dst = *src;
+      dst->color.alpha = beta;
+    } else if (beta) {
+      dst->color.red   = ALPHA(src->color.red,   dst->color.red,   beta);
+      dst->color.green = ALPHA(src->color.green, dst->color.green, beta);
+      dst->color.blue  = ALPHA(src->color.blue,  dst->color.blue,  beta);
+      if (dst->color.alpha < beta) {
+        dst->color.alpha = beta;
+      }
+    }
+  } else {
+    if ((src->color.alpha == 255) || (dst->color.alpha == 0)) {
+      *dst = *src;
+      dst->color.alpha = src->color.alpha;
+    } else if (src->color.alpha) {
+      dst->color.red   = ALPHA(src->color.red,   dst->color.red,   src->color.alpha);
+      dst->color.green = ALPHA(src->color.green, dst->color.green, src->color.alpha);
+      dst->color.blue  = ALPHA(src->color.blue,  dst->color.blue,  src->color.alpha);
+      if (dst->color.alpha < src->color.alpha) {
+        dst->color.alpha = src->color.alpha;
+      }
+    }
+  }
+  //uint8_t beta = DIV255(alpha * src->color.alpha);
+  //if (!beta) return;
+  //if ((beta == 255) || (dst->color.alpha == 0)) {
+  //  *dst = *src;
+  //  dst->color.alpha = beta;
+  //} else if (beta) {
+  //  dst->color.red   = ALPHA(src->color.red,   dst->color.red,   beta);
+  //  dst->color.green = ALPHA(src->color.green, dst->color.green, beta);
+  //  dst->color.blue  = ALPHA(src->color.blue,  dst->color.blue,  beta);
+  //  if (dst->color.alpha < beta) {
+  //    dst->color.alpha = beta;
+  //  }
+  //}
+}
+
+static pixel_prog void
+Pixel_blend_add(Pixel *dst, Pixel *src, uint8_t alpha)
+{
+  if (alpha != 255) {
+    uint8_t beta = FAST_DIV255(src->color.alpha * alpha);
+    int iR = dst->color.red   + FAST_DIV255(src->color.red   * beta);
+    int iG = dst->color.green + FAST_DIV255(src->color.green * beta);
+    int iB = dst->color.blue  + FAST_DIV255(src->color.blue  * beta);
+    dst->color.red   = MIN(iR, 255);
+    dst->color.green = MIN(iG, 255);
+    dst->color.blue  = MIN(iB, 255);
     if (dst->color.alpha < beta) {
       dst->color.alpha = beta;
     }
-
+  } else {
+    int iR = dst->color.red   + FAST_DIV255(src->color.red   * src->color.alpha);
+    int iG = dst->color.green + FAST_DIV255(src->color.green * src->color.alpha);
+    int iB = dst->color.blue  + FAST_DIV255(src->color.blue  * src->color.alpha);
+    dst->color.red   = MIN(iR, 255);
+    dst->color.green = MIN(iG, 255);
+    dst->color.blue  = MIN(iB, 255);
+    if (dst->color.alpha < src->color.alpha) {
+      dst->color.alpha = src->color.alpha;
+    }
   }
 }
 
 static pixel_prog void
-Pixel_blend_add(Pixel *dst, const Pixel *src, const uint8_t alpha)
+Pixel_blend_sub(Pixel *dst, Pixel *src, uint8_t alpha)
 {
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src->color.alpha * alpha);
-  if(!beta) return;
-  const int addR = dst->color.red   + DIV255(src->color.red   * beta);
-  const int addG = dst->color.green + DIV255(src->color.green * beta);
-  const int addB = dst->color.blue  + DIV255(src->color.blue  * beta);
-  dst->color.red   = MIN(255, addR);
-  dst->color.green = MIN(255, addG);
-  dst->color.blue  = MIN(255, addB);
-  if (dst->color.alpha < beta) {
-    dst->color.alpha = beta;
+  if (alpha != 255) {
+    uint8_t beta = DIV255(src->color.alpha * alpha);
+    int subR = dst->color.red   - FAST_DIV255(src->color.red   * beta);
+    int subG = dst->color.green - FAST_DIV255(src->color.green * beta);
+    int subB = dst->color.blue  - FAST_DIV255(src->color.blue  * beta);
+    dst->color.red   = MAX(0, subR);
+    dst->color.green = MAX(0, subG);
+    dst->color.blue  = MAX(0, subB);
+    if (dst->color.alpha < beta) {
+      dst->color.alpha = beta;
+    }
+  } else {
+    int subR = dst->color.red   - FAST_DIV255(src->color.red   * src->color.alpha);
+    int subG = dst->color.green - FAST_DIV255(src->color.green * src->color.alpha);
+    int subB = dst->color.blue  - FAST_DIV255(src->color.blue  * src->color.alpha);
+    dst->color.red   = MAX(0, subR);
+    dst->color.green = MAX(0, subG);
+    dst->color.blue  = MAX(0, subB);
+    if (dst->color.alpha < src->color.alpha) {
+      dst->color.alpha = src->color.alpha;
+    }
   }
 }
 
 static pixel_prog void
-Pixel_blend_sub(Pixel *dst, const Pixel *src, const uint8_t alpha)
+Pixel_blend_multiply(Pixel *dst, Pixel *src, uint8_t alpha)
 {
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src->color.alpha * alpha);
-  if(!beta) return;
-  const int subR = dst->color.red   - DIV255(src->color.red   * beta);
-  const int subG = dst->color.green - DIV255(src->color.green * beta);
-  const int subB = dst->color.blue  - DIV255(src->color.blue  * beta);
-  dst->color.red   = MAX(0, subR);
-  dst->color.green = MAX(0, subG);
-  dst->color.blue  = MAX(0, subB);
-  if (dst->color.alpha < beta) {
-    dst->color.alpha = beta;
+  if (alpha != 255) {
+    uint8_t beta = FAST_DIV255(src->color.alpha * alpha);
+    dst->color.red   = FAST_DIV255(dst->color.red   * FAST_DIV255(src->color.red   * beta));
+    dst->color.green = FAST_DIV255(dst->color.green * FAST_DIV255(src->color.green * beta));
+    dst->color.blue  = FAST_DIV255(dst->color.blue  * FAST_DIV255(src->color.blue  * beta));
+    if (dst->color.alpha < beta) {
+      dst->color.alpha = beta;
+    }
+  } else {
+    dst->color.red   = FAST_DIV255(dst->color.red   * FAST_DIV255(src->color.red   * src->color.alpha));
+    dst->color.green = FAST_DIV255(dst->color.green * FAST_DIV255(src->color.green * src->color.alpha));
+    dst->color.blue  = FAST_DIV255(dst->color.blue  * FAST_DIV255(src->color.blue  * src->color.alpha));
+    if (dst->color.alpha < src->color.alpha) {
+      dst->color.alpha = src->color.alpha;
+    }
   }
 }
 
 static pixel_prog void
-Pixel_blend_mul(Pixel *dst, const Pixel *src, const uint8_t alpha)
+Pixel_blend_divide(Pixel *dst, Pixel *src, uint8_t alpha)
 {
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src->color.alpha * alpha);
+  uint8_t beta = FAST_DIV255(src->color.alpha * alpha);
   if(!beta) return;
-  dst->color.red   = DIV255(dst->color.red   * DIV255(src->color.red   * beta));
-  dst->color.green = DIV255(dst->color.green * DIV255(src->color.green * beta));
-  dst->color.blue  = DIV255(dst->color.blue  * DIV255(src->color.blue  * beta));
-  if (dst->color.alpha < beta) {
-    dst->color.alpha = beta;
-  }
-}
-
-static pixel_prog void
-Pixel_blend_div(Pixel *dst, const Pixel *src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src->color.alpha * alpha);
-  if(!beta) return;
-  int red   = DIV255(src->color.red   * beta);
-  int green = DIV255(src->color.green * beta);
-  int blue  = DIV255(src->color.blue  * beta);
-  red   = DIV255(dst->color.red   / MAX(red, 1));
-  green = DIV255(dst->color.green / MAX(green, 1));
-  blue  = DIV255(dst->color.blue  / MAX(blue, 1));
+  int red   = FAST_DIV255(src->color.red   * beta);
+  int green = FAST_DIV255(src->color.green * beta);
+  int blue  = FAST_DIV255(src->color.blue  * beta);
+  red   = FAST_DIV255(dst->color.red   / MAX(red, 1));
+  green = FAST_DIV255(dst->color.green / MAX(green, 1));
+  blue  = FAST_DIV255(dst->color.blue  / MAX(blue, 1));
   dst->color.red   = CLAMPU255(red);
   dst->color.green = CLAMPU255(green);
   dst->color.blue  = CLAMPU255(blue);
@@ -816,226 +878,110 @@ Pixel_blend_div(Pixel *dst, const Pixel *src, const uint8_t alpha)
   }
 }
 
+#define TONE_DIV255 FAST_DIV255
 // http://www.poynton.com/ColorFAQ.html
 static pixel_prog void
-Pixel_tone(Pixel *dst, const Tone *tone, const uint8_t beta)
+Pixel_blend_tone(Pixel *dst, Tone *tone, uint8_t beta)
 {
   if (tone->saturation < 255) {
-    const uint8_t l = Lum(dst);
+    uint8_t l = Lum(dst);
     dst->color.red   = ALPHA(dst->color.red,   l, tone->saturation);
     dst->color.green = ALPHA(dst->color.green, l, tone->saturation);
     dst->color.blue  = ALPHA(dst->color.blue,  l, tone->saturation);
   }
-  if(!beta) return;
   if(tone->red != 0) {
     if (0 < tone->red) {
-      dst->color.red = ALPHA(255, dst->color.red, DIV255(tone->red * beta));
+      if (beta != 255) {
+        dst->color.red = ALPHA(255, dst->color.red, TONE_DIV255(tone->red * beta));
+      } else {
+        dst->color.red = ALPHA(255, dst->color.red, tone->red);
+      }
     } else {
-      dst->color.red = ALPHA(0,   dst->color.red, -DIV255(tone->red * beta));
+      if (beta != 255) {
+        dst->color.red = ALPHA(0,   dst->color.red, -TONE_DIV255(tone->red * beta));
+      } else {
+        dst->color.red = ALPHA(0,   dst->color.red, -tone->red);
+      }
     }
   }
   if(tone->green != 0) {
     if (0 < tone->green) {
-      dst->color.green = ALPHA(255, dst->color.green, DIV255(tone->green * beta));
+      if (beta != 255) {
+        dst->color.green = ALPHA(255, dst->color.green, TONE_DIV255(tone->green * beta));
+      } else {
+        dst->color.green = ALPHA(255, dst->color.green, tone->green * beta);
+      }
     } else {
-      dst->color.green = ALPHA(0,   dst->color.green, -DIV255(tone->green * beta));
+      if (beta != 255) {
+        dst->color.green = ALPHA(0,   dst->color.green, -TONE_DIV255(tone->green * beta));
+      } else {
+        dst->color.green = ALPHA(0,   dst->color.green, -tone->green);
+      }
     }
   }
   if(tone->blue != 0) {
     if (0 < tone->blue) {
-      dst->color.blue = ALPHA(255, dst->color.blue, DIV255(tone->blue * beta));
+      if (beta != 255) {
+        dst->color.blue = ALPHA(255, dst->color.blue, TONE_DIV255(tone->blue * beta));
+      } else {
+        dst->color.blue = ALPHA(255, dst->color.blue, tone->blue);
+      }
     } else {
-      dst->color.blue = ALPHA(0,   dst->color.blue, -DIV255(tone->blue * beta));
+      if (beta != 255) {
+        dst->color.blue = ALPHA(0,   dst->color.blue, -TONE_DIV255(tone->blue * beta));
+      } else {
+        dst->color.blue = ALPHA(0,   dst->color.blue, -tone->blue);
+      }
     }
   }
 }
 
 static pixel_prog void
-Pixel_blend_color(Pixel *dst, const Pixel *src, const uint8_t alpha)
+Pixel_blend_color(Pixel *dst, Pixel *src, uint8_t alpha)
 {
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src->color.alpha * alpha);
-  if(!beta) return;
-  dst->color.red   = ALPHA(src->color.red, dst->color.red, beta);//dst->color.red   + DIV255(dst->color.red   * DIV255(src->color.red   * beta));
-  dst->color.green = ALPHA(src->color.green, dst->color.green, beta);//dst->color.green + DIV255(dst->color.green * DIV255(src->color.green * beta));
-  dst->color.blue  = ALPHA(src->color.blue, dst->color.blue, beta);//dst->color.blue  + DIV255(dst->color.blue  * DIV255(src->color.blue  * beta));
-}
-
-#else
-
-static pixel_prog Pixel
-Pixel_blend_none(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  dst = src;
-  dst.color.alpha = DIV255(src.color.alpha * alpha);
-  return dst;
-}
-
-static pixel_prog Pixel
-Pixel_blend_src_mask(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  dst.color.alpha = DIV255(src.color.alpha * alpha);
-  return dst;
-}
-
-static pixel_prog Pixel
-Pixel_blend_dst_mask(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  const uint8_t old_alpha = dst.color.alpha;
-  dst = src;
-  dst.color.alpha = DIV255(old_alpha * alpha);
-  return dst;
-}
-
-static pixel_prog Pixel
-Pixel_blend_clear(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  const uint8_t beta = DIV255(src.color.alpha * alpha);
-  if(!beta) return dst;
-  dst.color.alpha = MAX(dst.color.alpha - beta, 0);
-  return dst;
-}
-
-static pixel_prog Pixel
-Pixel_blend_alpha(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  uint8_t beta = DIV255(alpha * src.color.alpha);
-  if (!beta) return dst;
-  if ((beta == 255) || (dst.color.alpha == 0)) {
-    dst = src;
-    dst.color.alpha = beta;
-  } else if (beta) {
-    dst.color.red   = ALPHA(src.color.red,   dst.color.red,   beta);
-    dst.color.green = ALPHA(src.color.green, dst.color.green, beta);
-    dst.color.blue  = ALPHA(src.color.blue,  dst.color.blue,  beta);
-    if (dst.color.alpha < beta) {
-      dst.color.alpha = beta;
-    }
+  if (alpha != 255) {
+    uint8_t beta = FAST_DIV255(src->color.alpha * alpha);
+    dst->color.red   = ALPHA(src->color.red,   dst->color.red,   beta);
+    dst->color.green = ALPHA(src->color.green, dst->color.green, beta);
+    dst->color.blue  = ALPHA(src->color.blue,  dst->color.blue,  beta);
+  } else {
+    dst->color.red   = ALPHA(src->color.red,   dst->color.red,   src->color.alpha);
+    dst->color.green = ALPHA(src->color.green, dst->color.green, src->color.alpha);
+    dst->color.blue  = ALPHA(src->color.blue,  dst->color.blue,  src->color.alpha);
   }
-  return dst;
 }
 
-static pixel_prog Pixel
-Pixel_blend_add(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src.color.alpha * alpha);
-  if(!beta) return dst;
-  const int addR = dst.color.red   + DIV255(src.color.red   * beta);
-  const int addG = dst.color.green + DIV255(src.color.green * beta);
-  const int addB = dst.color.blue  + DIV255(src.color.blue  * beta);
-  dst.color.red   = MIN(255, addR);
-  dst.color.green = MIN(255, addG);
-  dst.color.blue  = MIN(255, addB);
-  if (dst.color.alpha < beta) {
-    dst.color.alpha = beta;
-  }
-  return dst;
+#define PIXEL_BLEND(blendType, dst_px, src_px, alpha) \
+switch(blendType)                                     \
+{                                                     \
+  case BLEND_TYPE_NONE:                               \
+    Pixel_blend_none(dst_px, src_px, alpha);          \
+    break;                                            \
+  case BLEND_TYPE_ALPHA:                              \
+    Pixel_blend_alpha(dst_px, src_px, alpha);         \
+    break;                                            \
+  case BLEND_TYPE_ADD:                                \
+    Pixel_blend_add(dst_px, src_px, alpha);           \
+    break;                                            \
+  case BLEND_TYPE_SUBTRACT:                           \
+    Pixel_blend_sub(dst_px, src_px, alpha);           \
+    break;                                            \
+  case BLEND_TYPE_DST_MASK:                           \
+    Pixel_blend_dst_mask(dst_px, src_px, alpha);      \
+    break;                                            \
+  case BLEND_TYPE_SRC_MASK:                           \
+    Pixel_blend_src_mask(dst_px, src_px, alpha);      \
+    break;                                            \
+  case BLEND_TYPE_CLEAR:                              \
+    Pixel_blend_clear(dst_px, src_px, alpha);         \
+    break;                                            \
+  case BLEND_TYPE_MULTIPLY:                           \
+    Pixel_blend_multiply(dst_px, src_px, alpha);           \
+    break;                                            \
+  case BLEND_TYPE_DIVIDE:                             \
+    Pixel_blend_divide(dst_px, src_px, alpha);           \
+    break;                                            \
 }
-
-static pixel_prog Pixel
-Pixel_blend_sub(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src.color.alpha * alpha);
-  if(!beta) return dst;
-  const int subR = dst.color.red   - DIV255(src.color.red   * beta);
-  const int subG = dst.color.green - DIV255(src.color.green * beta);
-  const int subB = dst.color.blue  - DIV255(src.color.blue  * beta);
-  dst.color.red   = MAX(0, subR);
-  dst.color.green = MAX(0, subG);
-  dst.color.blue  = MAX(0, subB);
-  if (dst.color.alpha < beta) {
-    dst.color.alpha = beta;
-  }
-  return dst;
-}
-
-static pixel_prog Pixel
-Pixel_blend_mul(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src.color.alpha * alpha);
-  if(!beta) return dst;
-  dst.color.red   = DIV255(dst.color.red   * DIV255(src.color.red   * beta));
-  dst.color.green = DIV255(dst.color.green * DIV255(src.color.green * beta));
-  dst.color.blue  = DIV255(dst.color.blue  * DIV255(src.color.blue  * beta));
-  if (dst.color.alpha < beta) {
-    dst.color.alpha = beta;
-  }
-  return dst;
-}
-
-static pixel_prog Pixel
-Pixel_blend_div(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src.color.alpha * alpha);
-  if(!beta) return dst;
-  int red   = DIV255(src.color.red   * beta);
-  int green = DIV255(src.color.green * beta);
-  int blue  = DIV255(src.color.blue  * beta);
-  red   = DIV255(dst.color.red   / MAX(red, 1));
-  green = DIV255(dst.color.green / MAX(green, 1));
-  blue  = DIV255(dst.color.blue  / MAX(blue, 1));
-  dst.color.red   = CLAMPU255(red);
-  dst.color.green = CLAMPU255(green);
-  dst.color.blue  = CLAMPU255(blue);
-  if (dst.color.alpha < beta) {
-    dst.color.alpha = beta;
-  }
-  return dst;
-}
-
-// http://www.poynton.com/ColorFAQ.html
-static pixel_prog Pixel
-Pixel_tone(Pixel dst, const Tone tone, const uint8_t beta)
-{
-  if(!beta) return dst;
-  if (tone.saturation < 255) {
-    const uint8_t l = (dst.color.red + dst.color.green + dst.color.blue) / 3; //Lum(dst);
-    dst.color.red   = ALPHA(dst.color.red,   l, tone.saturation);
-    dst.color.green = ALPHA(dst.color.green, l, tone.saturation);
-    dst.color.blue  = ALPHA(dst.color.blue,  l, tone.saturation);
-  }
-  if(tone.red != 0) {
-    if (0 < tone.red) {
-      dst.color.red = ALPHA(255, dst.color.red, DIV255(tone.red * beta));
-    } else {
-      dst.color.red = ALPHA(0,   dst.color.red, -DIV255(tone.red * beta));
-    }
-  }
-  if(tone.green != 0) {
-    if (0 < tone.green) {
-      dst.color.green = ALPHA(255, dst.color.green, DIV255(tone.green * beta));
-    } else {
-      dst.color.green = ALPHA(0,   dst.color.green, -DIV255(tone.green * beta));
-    }
-  }
-  if(tone.blue != 0) {
-    if (0 < tone.blue) {
-      dst.color.blue = ALPHA(255, dst.color.blue, DIV255(tone.blue * beta));
-    } else {
-      dst.color.blue = ALPHA(0,   dst.color.blue, -DIV255(tone.blue * beta));
-    }
-  }
-  return dst;
-}
-
-static pixel_prog Pixel
-Pixel_blend_color(Pixel dst, const Pixel src, const uint8_t alpha)
-{
-  alpha_check(alpha, dst);
-  const uint8_t beta = DIV255(src.color.alpha * alpha);
-  if(!beta) return dst;
-  dst.color.red   = ALPHA(src.color.red,   dst.color.red, beta);
-  dst.color.green = ALPHA(src.color.green, dst.color.green, beta);
-  dst.color.blue  = ALPHA(src.color.blue,  dst.color.blue, beta);
-  return dst;
-}
-
-#endif
 
 static VALUE
 Texture_render_in_perspective(int argc, VALUE* argv, VALUE self)
@@ -1320,24 +1266,12 @@ strb_TextureRender(const Texture* src_texture, const Texture* dst_texture,
         if(is_x_in_rect(cclip_rect, ix)) {
           Pixel pixel = *src_px;
           if(use_tone) {
-            #ifdef PIXEL_POINTER
-              Pixel_tone(&pixel, tone, alpha);
-            #else
-              pixel = Pixel_tone(pixel, *tone, alpha);
-            #endif
+            Pixel_blend_tone(&pixel, tone, alpha);
           }
           if(use_color) {
-            #ifdef PIXEL_POINTER
-              Pixel_blend_color(&pixel, px_color, alpha);
-            #else
-              pixel = Pixel_blend_color(pixel, *px_color, alpha);
-            #endif
+            Pixel_blend_color(&pixel, px_color, alpha);
           }
-          #ifdef PIXEL_POINTER
-            PIXEL_BLEND(blendType, dst_px, &pixel, alpha);
-          #else
-            PIXEL_BLEND(blendType, *dst_px, pixel, alpha);
-          #endif
+          PIXEL_BLEND(blendType, dst_px, &pixel, alpha);
         }
       }
     } else {
@@ -1492,13 +1426,8 @@ strb_TextureRenderWithOptions(const Texture* src_texture, const Texture* dst_tex
             if (blendType == BLEND_TYPE_SRC_MASK) {
               dst->color.alpha = srcColor.alpha;
             } else {
-              #ifdef PIXEL_POINTER
-                Pixel_tone((Pixel*)(&srcColor), &options->tone, alpha);
-                PIXEL_BLEND(blendType, dst, (Pixel*)(&srcColor), alpha);
-              #else
-                srcColor = Pixel_tone((Pixel)srcColor, options->tone, alpha).color;
-                PIXEL_BLEND(blendType, *dst, (Pixel)srcColor, alpha);
-              #endif
+              Pixel_blend_tone((Pixel*)(&srcColor), &options->tone, alpha);
+              PIXEL_BLEND(blendType, dst, (Pixel*)(&srcColor), alpha);
             }
           } else if ((srcI < srcX && srcDXX <= 0) ||
                      (srcX2 <= srcI && 0 <= srcDXX) ||
@@ -3062,11 +2991,7 @@ Texture_render_rect(int argc, VALUE* argv, VALUE self)
     if(is_y_in_rect(cclip_rect, rect.y + j)) {
       for (uint32_t i = 0; i < rect.width; ++i, ++pixels) {
         if(is_x_in_rect(cclip_rect, rect.x + i)) {
-          #ifdef PIXEL_POINTER
-            PIXEL_BLEND(blend_type, pixels, &px_color, 255);
-          #else
-            PIXEL_BLEND(blend_type, *pixels, px_color, 255);
-          #endif
+          PIXEL_BLEND(blend_type, pixels, &px_color, 255);
         }
       }
     }

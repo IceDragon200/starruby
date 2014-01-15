@@ -33,6 +33,8 @@
 #define CLAMPU255 MINMAXU255
 #define CLAMP255 MINMAX255
 #define DIV255(x) ((x) / 255)
+//#define FAST_DIV255(x) ((x) / 255)
+#define FAST_DIV255(x) ((x) >> 8)
 //#define DIV255(x) ((x) >> 8)
 
 #ifndef PI

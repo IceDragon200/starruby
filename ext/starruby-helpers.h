@@ -32,10 +32,10 @@
 #define MINMAX255(x) MINMAX(x, 255, -255)
 #define CLAMPU255 MINMAXU255
 #define CLAMP255 MINMAX255
-#define DIV255(x) ((x) / 255)
-//#define FAST_DIV255(x) ((x) / 255)
-#define FAST_DIV255(x) ((x) >> 8)
 //#define DIV255(x) ((x) >> 8)
+#define DIV255(x) ((x) / 255)
+#define FAST_DIV255(x) ((x) >> 8)
+#define TONE_DIV255 FAST_DIV255
 
 #ifndef PI
   #ifdef M_PI
@@ -51,7 +51,7 @@
 //#define ALPHA(src, dst, a) DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a))
 /* Jet */
 #define ALPHA(src, dst, a) (((a * (src - dst)) >> 8) + dst)
-
+#define TONE_ALPHA(src, dst, a) DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a))
 
 #ifndef NUMERIC_P
   #define NUMERIC_P(_rbObj_) (TYPE(_rbObj_) == T_FIXNUM ? true : (TYPE(_rbObj_) == T_FLOAT ? true : (TYPE(_rbObj_) == T_BIGNUM ? true : false)))

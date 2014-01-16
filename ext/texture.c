@@ -663,6 +663,7 @@ Texture_aset(VALUE self, VALUE rbX, VALUE rbY, VALUE rbColor)
 #define ClipSub(_c_, l, n) (l + (((_c_ - l) * (1 - l)) / (n - l)))
 
 #define pixel_prog inline
+//#define pixel_prog
 //#define pixel_prog void
 
 static pixel_prog void
@@ -878,59 +879,58 @@ Pixel_blend_divide(Pixel *dst, Pixel *src, uint8_t alpha)
   }
 }
 
-#define TONE_DIV255 FAST_DIV255
 // http://www.poynton.com/ColorFAQ.html
 static pixel_prog void
 Pixel_blend_tone(Pixel *dst, Tone *tone, uint8_t beta)
 {
   if (tone->saturation < 255) {
     uint8_t l = Lum(dst);
-    dst->color.red   = ALPHA(dst->color.red,   l, tone->saturation);
-    dst->color.green = ALPHA(dst->color.green, l, tone->saturation);
-    dst->color.blue  = ALPHA(dst->color.blue,  l, tone->saturation);
+    dst->color.red   = TONE_ALPHA(dst->color.red,   l, tone->saturation);
+    dst->color.green = TONE_ALPHA(dst->color.green, l, tone->saturation);
+    dst->color.blue  = TONE_ALPHA(dst->color.blue,  l, tone->saturation);
   }
   if(tone->red != 0) {
     if (0 < tone->red) {
       if (beta != 255) {
-        dst->color.red = ALPHA(255, dst->color.red, TONE_DIV255(tone->red * beta));
+        dst->color.red = TONE_ALPHA(255, dst->color.red, TONE_DIV255(tone->red * beta));
       } else {
-        dst->color.red = ALPHA(255, dst->color.red, tone->red);
+        dst->color.red = TONE_ALPHA(255, dst->color.red, tone->red);
       }
     } else {
       if (beta != 255) {
-        dst->color.red = ALPHA(0,   dst->color.red, -TONE_DIV255(tone->red * beta));
+        dst->color.red = TONE_ALPHA(0,   dst->color.red, -TONE_DIV255(tone->red * beta));
       } else {
-        dst->color.red = ALPHA(0,   dst->color.red, -tone->red);
+        dst->color.red = TONE_ALPHA(0,   dst->color.red, -tone->red);
       }
     }
   }
   if(tone->green != 0) {
     if (0 < tone->green) {
       if (beta != 255) {
-        dst->color.green = ALPHA(255, dst->color.green, TONE_DIV255(tone->green * beta));
+        dst->color.green = TONE_ALPHA(255, dst->color.green, TONE_DIV255(tone->green * beta));
       } else {
-        dst->color.green = ALPHA(255, dst->color.green, tone->green * beta);
+        dst->color.green = TONE_ALPHA(255, dst->color.green, tone->green * beta);
       }
     } else {
       if (beta != 255) {
-        dst->color.green = ALPHA(0,   dst->color.green, -TONE_DIV255(tone->green * beta));
+        dst->color.green = TONE_ALPHA(0,   dst->color.green, -TONE_DIV255(tone->green * beta));
       } else {
-        dst->color.green = ALPHA(0,   dst->color.green, -tone->green);
+        dst->color.green = TONE_ALPHA(0,   dst->color.green, -tone->green);
       }
     }
   }
   if(tone->blue != 0) {
     if (0 < tone->blue) {
       if (beta != 255) {
-        dst->color.blue = ALPHA(255, dst->color.blue, TONE_DIV255(tone->blue * beta));
+        dst->color.blue = TONE_ALPHA(255, dst->color.blue, TONE_DIV255(tone->blue * beta));
       } else {
-        dst->color.blue = ALPHA(255, dst->color.blue, tone->blue);
+        dst->color.blue = TONE_ALPHA(255, dst->color.blue, tone->blue);
       }
     } else {
       if (beta != 255) {
-        dst->color.blue = ALPHA(0,   dst->color.blue, -TONE_DIV255(tone->blue * beta));
+        dst->color.blue = TONE_ALPHA(0,   dst->color.blue, -TONE_DIV255(tone->blue * beta));
       } else {
-        dst->color.blue = ALPHA(0,   dst->color.blue, -tone->blue);
+        dst->color.blue = TONE_ALPHA(0,   dst->color.blue, -tone->blue);
       }
     }
   }

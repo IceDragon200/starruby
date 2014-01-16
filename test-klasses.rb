@@ -2,6 +2,8 @@
 #require 'cairo'
 require_relative 'lib/starruby'
 
+StarRuby::Font.exist?("Arial.ttf")
+
 p (b = StarRuby::Bytemap.new(24, 24, 4))
 p (b.to_rect.to_s)
 p (b.to_a)

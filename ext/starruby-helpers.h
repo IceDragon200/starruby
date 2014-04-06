@@ -9,19 +9,23 @@
 
 /* abs */
 #ifndef ABS
-  #define ABS(x) (((x) >= 0) ? (x) : (-(x)))
+//#  define ABS(x) (((x) >= 0) ? (x) : (-(x)))
+inline int ABS(int x) { return (((x) >= 0) ? (x) : (-(x))); }
 #endif
 /* signum */
 #ifndef SGN
-  #define SGN(x) (((x) >= 0) ? 1 : -1)
+//#  define SGN(x) (((x) >= 0) ? 1 : -1)
+inline int SGN(int x) { return (((x) >= 0) ? 1 : -1); }
 #endif
 /* max */
 #ifndef MAX
-  #define MAX(x, y) (((x) > (y)) ? (x) : (y))
+//#  define MAX(x, y) (((x) > (y)) ? (x) : (y))
+inline int MAX(int x, int y) { return (((x) > (y)) ? (x) : (y)); }
 #endif
 /* min */
 #ifndef MIN
-  #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+//#  define MIN(x, y) (((x) < (y)) ? (x) : (y))
+inline int MIN(int x, int y) { return (((x) < (y)) ? (x) : (y)); }
 #endif
 /* minmax */
 #ifndef MINMAX
@@ -50,8 +54,10 @@
 /* StarRuby */
 //#define ALPHA(src, dst, a) DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a))
 /* Jet */
-#define ALPHA(src, dst, a) (((a * (src - dst)) >> 8) + dst)
-#define TONE_ALPHA(src, dst, a) DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a))
+//#define ALPHA(src, dst, a) (((a * (src - dst)) >> 8) + dst)
+//#define TONE_ALPHA(src, dst, a) DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a))
+inline uint8_t ALPHA(int src, int dst, int a) { return (((a * (src - dst)) >> 8) + dst); }
+inline uint8_t TONE_ALPHA(int src, int dst, int a) { return DIV255(((dst) << 8) - (dst) + ((src) - (dst)) * (a)); }
 
 #ifndef NUMERIC_P
   #define NUMERIC_P(_rbObj_) (TYPE(_rbObj_) == T_FIXNUM ? true : (TYPE(_rbObj_) == T_FLOAT ? true : (TYPE(_rbObj_) == T_BIGNUM ? true : false)))

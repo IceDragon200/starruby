@@ -3,8 +3,17 @@
 
 #include "texture.h"
 
-#define is_valid_tone(tone_p) (tone_p && (tone_p->saturation < 255 || tone_p->red != 0 || tone_p->green != 0 || tone_p->blue != 0))
-#define is_valid_color(color_p) (color_p && (color_p->alpha > 0))
+inline bool is_valid_tone(Tone tone) {
+  return tone.saturation < 255 ||
+         tone.red != 0 || tone.green != 0 || tone.blue != 0;
+}
+
+inline bool is_valid_color(Color color) {
+  return color.alpha > 0;
+}
+
+//#define is_valid_tone(tone_p) (tone_p && (tone_p->saturation < 255 || tone_p->red != 0 || tone_p->green != 0 || tone_p->blue != 0))
+//#define is_valid_color(color_p) (color_p && (color_p->alpha > 0))
 #define is_x_in_rect(rect, _x_) (((rect).x <= (_x_)) && (((rect).x + (rect).width) > (_x_)))
 #define is_y_in_rect(rect, _y_) (((rect).y <= (_y_)) && (((rect).y + (rect).height) > (_y_)))
 #define is_xy_in_rect(rect, _x_, _y_) (is_x_in_rect(rect, _x_) && is_y_in_rect(rect, _y_))

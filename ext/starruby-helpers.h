@@ -67,7 +67,7 @@
 #endif
 
 #ifndef DBL2FIX
-  #define DBL2FIX(n) INT2FIX((int32_t)(n))
+  #define DBL2FIX(n) INT2FIX((int)(n))
 #endif
 
 /* Texture Helpers */

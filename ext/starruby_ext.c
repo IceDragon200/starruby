@@ -96,7 +96,7 @@ Init_starruby_ext(void)
     rb_raise_sdl_error();
   }
 
-  volatile VALUE rbVersion = rb_str_new2(STRB_VERSION_S);
+  volatile VALUE rbVersion = rb_str_new2(STRB_VERSION_STRING);
   OBJ_FREEZE(rbVersion);
   rb_define_const(rb_mStarRuby, "VERSION", rbVersion);
   strb_InitializeSymbols(rb_mStarRuby);
@@ -104,13 +104,9 @@ Init_starruby_ext(void)
   strb_InitializeSdlFont();
   strb_InitializeSdlInput();
 
-#ifdef STRB_USE_AUDIO
   strb_InitializeSdlAudio();
   rb_define_const(rb_mStarRuby, "HAS_AUDIO", Qtrue);
   strb_InitializeAudio(rb_mStarRuby);
-#else
-  rb_define_const(rb_mStarRuby, "HAS_AUDIO", Qfalse);
-#endif
 
   strb_InitializeBytemap(rb_mStarRuby);
   strb_InitializeColor(rb_mStarRuby);

@@ -1,6 +1,7 @@
 #ifndef STARRUBY_PRIVATE_H
 #define STARRUBY_PRIVATE_H
 
+#include <extconf.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -18,8 +19,11 @@
 
 /* Ruby Related Headers */
 #include <ruby.h>
-#ifdef HAVE_CAIRO
-#  include <cairo.h>
+#if HAVE_CAIRO_CAIRO_H
+#  define HAVE_CAIRO 1
+#endif
+#if HAVE_CAIRO
+#  include <cairo/cairo.h>
 #  include "rb_cairo.h"
 #endif
 

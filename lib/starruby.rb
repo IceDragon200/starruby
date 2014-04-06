@@ -18,4 +18,8 @@ class StarRuby::Texture
     return texture
   end
 
+  def mirror
+    rotate(ROTATE_HORZ)
+  end
+
 end

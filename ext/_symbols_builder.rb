@@ -128,8 +128,8 @@ mk_symbol_const  = ->(symbol) do
     ["#define ID_#{var_name.to_s} rb_intern(\"#{rb_name.to_s}\")",
      "#define symbol_#{var_name.to_s} ID2SYM(ID_#{var_name.to_s})"]
   else
-    ["#{flag} VALUE ID_#{var_name.to_s};",
-     "#{flag} VALUE symbol_#{var_name.to_s};"]
+    ["extern #{flag} VALUE ID_#{var_name.to_s};",
+     "extern #{flag} VALUE symbol_#{var_name.to_s};"]
    end
 end
 

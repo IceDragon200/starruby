@@ -60,7 +60,10 @@ strb_Texture_is_disposed(const Texture* const texture)
 inline void
 strb_TextureCheckDisposed(const Texture* const texture)
 {
-  if (!texture->pixels) {
+  if (!texture) {
+    rb_raise(rb_eRuntimeError,
+             "cannot modify null StarRuby::Texture");
+  } else if (!texture->pixels) {
     rb_raise(rb_eRuntimeError,
              "can't modify disposed StarRuby::Texture");
   }
@@ -535,6 +538,7 @@ Texture_initialize_copy(VALUE self, VALUE rbTexture)
   const Texture* origTexture;
   Data_Get_Struct(self, Texture, texture);
   Data_Get_Struct(rbTexture, Texture, origTexture);
+  strb_TextureCheckDisposed(origTexture);
   stratos_Texture_alloc_data(texture, origTexture->width, origTexture->height);
   MEMCPY(texture->pixels, origTexture->pixels, Pixel, texture->size);
   Texture_setup_extra(self);
@@ -1651,19 +1655,11 @@ Texture_render_text(int argc, VALUE* argv, VALUE self)
 static VALUE
 Texture_clear(VALUE self)
 {
-  int32_t length;
-  Pixel* pixels;
   Texture* texture;
   rb_check_frozen(self);
   Data_Get_Struct(self, Texture, texture);
   strb_TextureCheckDisposed(texture);
-
-  length = texture->width * texture->height;
-  pixels = texture->pixels;
-  for (int32_t i = 0; i < length; ++i, ++pixels) {
-    pixels->value = 0;
-  }
-  //MEMZERO(texture->pixels, Pixel, length);
+  memset((char*)texture->pixels, 0, texture->size * 4);
   return self;
 }
 
@@ -1754,7 +1750,7 @@ Texture_dump(VALUE self, VALUE rbFormat)
   const char* format = StringValuePtr(rbFormat);
   const int formatLength = RSTRING_LEN(rbFormat);
   const int pixelLength = texture->width * texture->height;
-  volatile VALUE rbResult = rb_str_new(NULL, pixelLength * formatLength);
+  volatile VALUE rbResult = rb_str_new(0, pixelLength * formatLength);
   uint8_t* strPtr = (uint8_t*)RSTRING_PTR(rbResult);
   const Pixel* pixels = texture->pixels;
   for (int i = 0; i < pixelLength; ++i, ++pixels) {
@@ -3105,6 +3101,7 @@ Texture_cr_context(VALUE self)
 {
   Texture* texture;
   Data_Get_Struct(self, Texture, texture);
+  strb_TextureCheckDisposed(texture);
   return texture->rb_cr_context;
 }
 #endif
@@ -3115,6 +3112,15 @@ Texture_filename(VALUE self)
   return rb_iv_get(self, "filename");
 }
 
+static VALUE
+Texture_blob(VALUE self)
+{
+  Texture* texture;
+  Data_Get_Struct(self, Texture, texture);
+  strb_TextureCheckDisposed(texture);
+  return rb_str_new((char*)texture->pixels, texture->size * 4);
+}
+
 VALUE strb_InitializeTexture(VALUE rb_mStarRuby)
 {
   rb_cTexture = rb_define_class_under(rb_mStarRuby, "Texture", rb_cObject);
@@ -3122,98 +3128,55 @@ VALUE strb_InitializeTexture(VALUE rb_mStarRuby)
 
   rb_define_singleton_method(rb_cTexture, "load_png", Texture_s_load_png, -1);
   rb_define_singleton_method(rb_cTexture, "load", Texture_s_load_png, -1);
+  rb_define_singleton_method(rb_cTexture, "load_file", Texture_s_load_png, -1);
 
   rb_define_private_method(rb_cTexture, "initialize", Texture_initialize, 2);
-  rb_define_private_method(rb_cTexture, "initialize_copy",
-                           Texture_initialize_copy, 1);
+  rb_define_private_method(rb_cTexture, "initialize_copy", Texture_initialize_copy, 1);
 
   rb_define_method(rb_cTexture, "filename", Texture_filename, 0);
 
-  rb_define_method(rb_cTexture, "[]",
-                   Texture_aref, 2);
-  rb_define_method(rb_cTexture, "[]=",
-                   Texture_aset, 3);
-  rb_define_method(rb_cTexture, "blur",
-                   Texture_blur, 0);
-  rb_define_method(rb_cTexture, "change_hue",
-                   Texture_change_hue, 1);
-  rb_define_method(rb_cTexture, "change_hue!",
-                   Texture_change_hue_bang, 1);
-
-  rb_define_method(rb_cTexture, "clear",
-                   Texture_clear, 0);
-  rb_define_method(rb_cTexture, "dispose",
-                   Texture_dispose, 0);
-  rb_define_method(rb_cTexture, "disposed?",
-                   Texture_disposed, 0);
-
-  rb_define_method(rb_cTexture, "dump",
-                   Texture_dump, 1);
-  rb_define_method(rb_cTexture, "undump",
-                   Texture_undump, 2);
-
-  rb_define_method(rb_cTexture, "fill",
-                   Texture_fill, 1);
-  rb_define_method(rb_cTexture, "clear_rect",
-                   Texture_clear_rect, -1);
-  rb_define_method(rb_cTexture, "gradient_fill_rect",
-                   Texture_gradient_fill_rect, -1);
-  rb_define_method(rb_cTexture, "height",
-                   Texture_height, 0);
+  rb_define_method(rb_cTexture, "[]", Texture_aref, 2);
+  rb_define_method(rb_cTexture, "[]=", Texture_aset, 3);
+  rb_define_method(rb_cTexture, "blur", Texture_blur, 0);
+  rb_define_method(rb_cTexture, "change_hue", Texture_change_hue, 1);
+  rb_define_method(rb_cTexture, "change_hue!", Texture_change_hue_bang, 1);
+  rb_define_method(rb_cTexture, "clear", Texture_clear, 0);
+  rb_define_method(rb_cTexture, "dispose", Texture_dispose, 0);
+  rb_define_method(rb_cTexture, "disposed?", Texture_disposed, 0);
+  rb_define_method(rb_cTexture, "dump", Texture_dump, 1);
+  rb_define_method(rb_cTexture, "undump", Texture_undump, 2);
+  rb_define_method(rb_cTexture, "fill", Texture_fill, 1);
+  rb_define_method(rb_cTexture, "clear_rect", Texture_clear_rect, -1);
+  rb_define_method(rb_cTexture, "gradient_fill_rect", Texture_gradient_fill_rect, -1);
+  rb_define_method(rb_cTexture, "height", Texture_height, 0);
 
   //rb_define_method(rb_cTexture, "render_in_perspective",
   //                 Texture_render_in_perspective, -1);
   //rb_define_method(rb_cTexture, "transform_in_perspective",
   //                 Texture_transform_in_perspective, -1);
-
-  rb_define_method(rb_cTexture, "render_line",
-                   Texture_render_line, 5);
-
-  rb_define_method(rb_cTexture, "render_pixel",
-                   Texture_render_pixel, 3);
-
-  rb_define_method(rb_cTexture, "render_rect",
-                   Texture_render_rect, -1);
-
-  rb_define_method(rb_cTexture, "render_text",
-                   Texture_render_text, -1);
-
-  rb_define_method(rb_cTexture, "render_texture",
-                   Texture_render_texture, -1);
+  rb_define_method(rb_cTexture, "render_line", Texture_render_line, 5);
+  rb_define_method(rb_cTexture, "render_pixel", Texture_render_pixel, 3);
+  rb_define_method(rb_cTexture, "render_rect", Texture_render_rect, -1);
+  rb_define_method(rb_cTexture, "render_text", Texture_render_text, -1);
+  rb_define_method(rb_cTexture, "render_texture", Texture_render_texture, -1);
 
   /* saving options */
   rb_define_method(rb_cTexture, "save_png", Texture_save_png, 1);
   rb_define_alias(rb_cTexture, "save", "save_png");
+  rb_define_alias(rb_cTexture, "save_file", "save_png");
 
-  rb_define_method(rb_cTexture, "size",
-                   Texture_size, 0);
-
-  rb_define_method(rb_cTexture, "width",
-                   Texture_width, 0);
-
-  rb_define_method(rb_cTexture, "rect",
-                   Texture_rect, 0);
-
-  //rb_define_method(rb_cTexture, "rotate",
-  //                 Texture_rotate, 1);
-
-  //rb_define_method(rb_cTexture, "crop",
-  //                 Texture_crop, -1);
-
-  //rb_define_method(rb_cTexture, "recolor",
-  //                 Texture_recolor, 3);
-
-  //rb_define_method(rb_cTexture, "bucket_fill",
-  //                 Texture_bucket_fill, 3);
-
-  rb_define_method(rb_cTexture, "mask",
-                   Texture_mask, 6);
-
+  rb_define_method(rb_cTexture, "size", Texture_size, 0);
+  rb_define_method(rb_cTexture, "width", Texture_width, 0);
+  rb_define_method(rb_cTexture, "rect", Texture_rect, 0);
+  rb_define_method(rb_cTexture, "rotate", Texture_rotate, 1);
+  rb_define_method(rb_cTexture, "crop", Texture_crop, -1);
+  rb_define_method(rb_cTexture, "recolor", Texture_recolor, 3);
+  /* rb_define_method(rb_cTexture, "bucket_fill", Texture_bucket_fill, 3); */
+  rb_define_method(rb_cTexture, "mask", Texture_mask, 6);
+  rb_define_method(rb_cTexture, "blob", Texture_blob, 0);
   /* clip_rect */
-  rb_define_method(rb_cTexture, "clip_rect",
-                   Texture_clip_rect, 0);
-  rb_define_method(rb_cTexture, "clip_rect=",
-                   Texture_clip_rect_eq, 1);
+  rb_define_method(rb_cTexture, "clip_rect", Texture_clip_rect, 0);
+  rb_define_method(rb_cTexture, "clip_rect=", Texture_clip_rect_eq, 1);
 #ifdef HAVE_CAIRO
   rb_define_method(rb_cTexture, "cr_context", Texture_cr_context, 0);
   rb_define_method(rb_cTexture, "cr_recontext", Texture_recycle_cr_context, 0);

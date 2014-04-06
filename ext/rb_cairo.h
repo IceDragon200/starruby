@@ -17,22 +17,22 @@
 #ifndef RB_CAIRO_H
 #define RB_CAIRO_H
 
-#include <cairo.h>
+#include <cairo/cairo.h>
 
 #ifdef CAIRO_HAS_PS_SURFACE
-#  include <cairo-ps.h>
+#  include <cairo/cairo-ps.h>
 #endif
 
 #ifdef CAIRO_HAS_PDF_SURFACE
-#  include <cairo-pdf.h>
+#  include <cairo/cairo-pdf.h>
 #endif
 
 #ifdef CAIRO_HAS_SVG_SURFACE
-#  include <cairo-svg.h>
+#  include <cairo/cairo-svg.h>
 #endif
 
 #ifdef CAIRO_HAS_SCRIPT_SURFACE
-#  include <cairo-script.h>
+#  include <cairo/cairo-script.h>
 #endif
 
 #define CAIRO_CHECK_VERSION(major, minor, micro)    \

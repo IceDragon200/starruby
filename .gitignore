@@ -1,7 +1,9 @@
-*~
 *.bundle
 *.log
 *.o
 *.so
+*.dll
+*~
 conftest.dSYM
 Makefile
+old-ext
